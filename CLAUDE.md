@@ -3,20 +3,19 @@
 ## Overview
 **LinkGuardian** is an affiliate link monitoring SaaS for micro-influencers (5K-50K followers). Automatically checks affiliate links for errors and sends alerts before revenue is lost.
 
-## Problem
-- 20-25% of affiliate links contain errors or break over time
-- Influencers lose hundreds of dollars monthly without knowing
-- Existing tools are too expensive ($50-500/mo) or too complex for small creators
-
-## Solution
-Automated link health monitoring with:
-- Daily checks for broken links (404s, redirects, server errors)
-- Proactive email/push notifications
-- Missing affiliate tag detection
-- Simple dashboard to manage all links
-- Affordable pricing ($12-24/mo)
+**Project docs** - './docs/'
 
 ---
+
+## Code style
+- Use functional components
+- Use hooks instead of classes
+- Prefer named exports
+- Use `let` and `const`, never `var`
+
+## Do
+- answer briefly
+- Don't summarize after writing code
 
 ## Tech Stack
 
