@@ -12,6 +12,7 @@
 - Use hooks instead of classes
 - Prefer named exports
 - Use `let` and `const`, never `var`
+- Use shadcn/ui components if shadcn have not component use Tailwind CSS
 
 ## Do
 - answer briefly
