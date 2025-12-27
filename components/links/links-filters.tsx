@@ -18,6 +18,9 @@ interface LinksFiltersProps {
   categoryFilter: string;
   onCategoryFilterChange: (value: string) => void;
   categories: string[];
+  tagFilter: string;
+  onTagFilterChange: (value: string) => void;
+  tags: string[];
 }
 
 export const LinksFilters = ({
@@ -28,6 +31,9 @@ export const LinksFilters = ({
   categoryFilter,
   onCategoryFilterChange,
   categories,
+  tagFilter,
+  onTagFilterChange,
+  tags,
 }: LinksFiltersProps) => {
   return (
     <div className="flex flex-col sm:flex-row gap-4">
@@ -65,6 +71,21 @@ export const LinksFilters = ({
           {categories.map((category) => (
             <SelectItem key={category} value={category}>
               {category}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      <Select value={tagFilter} onValueChange={onTagFilterChange}>
+        <SelectTrigger className="w-full sm:w-[180px]">
+          <Filter className="h-4 w-4 mr-2" />
+          <SelectValue placeholder="All Tags" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All Tags</SelectItem>
+          {tags.map((tag) => (
+            <SelectItem key={tag} value={tag}>
+              {tag}
             </SelectItem>
           ))}
         </SelectContent>

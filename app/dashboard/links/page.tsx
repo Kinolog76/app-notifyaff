@@ -23,6 +23,7 @@ interface Link {
   name: string;
   short_url?: string;
   category?: string;
+  tags?: string;
   status: "active" | "inactive" | "broken" | "warning";
   created_at: string;
   updated_at: string;
@@ -95,7 +96,7 @@ export default function LinksPage() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center flex-wrap gap-4 justify-between">
           <div>
             <h1 className="text-3xl font-bold">Links</h1>
             <p className="mt-1 text-sm text-muted-foreground">

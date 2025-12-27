@@ -28,6 +28,7 @@ interface Link {
   name: string;
   short_url?: string;
   category?: string;
+  tags?: string;
   status: "active" | "inactive" | "broken" | "warning";
   created_at: string;
   updated_at: string;
@@ -53,6 +54,7 @@ export const LinksTable = ({ links, onEdit, onDelete }: LinksTableProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
+  const [tagFilter, setTagFilter] = useState("all");
   const [statsLink, setStatsLink] = useState<Link | null>(null);
   const [isStatsDialogOpen, setIsStatsDialogOpen] = useState(false);
 
@@ -67,6 +69,20 @@ export const LinksTable = ({ links, onEdit, onDelete }: LinksTableProps) => {
     return Array.from(uniqueCategories).sort();
   }, [links]);
 
+  // Extract unique tags from links
+  const tags = useMemo(() => {
+    const uniqueTags = new Set<string>();
+    links.forEach((link) => {
+      if (link.tags) {
+        const linkTags = link.tags.split(",").map((tag) => tag.trim());
+        linkTags.forEach((tag) => {
+          if (tag) uniqueTags.add(tag);
+        });
+      }
+    });
+    return Array.from(uniqueTags).sort();
+  }, [links]);
+
   // Filter links based on search and filters
   const filteredLinks = useMemo(() => {
     return links.filter((link) => {
@@ -75,7 +91,8 @@ export const LinksTable = ({ links, onEdit, onDelete }: LinksTableProps) => {
         searchQuery === "" ||
         link.url.toLowerCase().includes(searchQuery.toLowerCase()) ||
         link.short_url?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        link.category?.toLowerCase().includes(searchQuery.toLowerCase());
+        link.category?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        link.tags?.toLowerCase().includes(searchQuery.toLowerCase());
 
       // Status filter
       const matchesStatus =
@@ -85,9 +102,14 @@ export const LinksTable = ({ links, onEdit, onDelete }: LinksTableProps) => {
       const matchesCategory =
         categoryFilter === "all" || link.category === categoryFilter;
 
-      return matchesSearch && matchesStatus && matchesCategory;
+      // Tag filter
+      const matchesTag =
+        tagFilter === "all" ||
+        (link.tags && link.tags.split(",").map((t) => t.trim()).includes(tagFilter));
+
+      return matchesSearch && matchesStatus && matchesCategory && matchesTag;
     });
-  }, [links, searchQuery, statusFilter, categoryFilter]);
+  }, [links, searchQuery, statusFilter, categoryFilter, tagFilter]);
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this link?")) return;
@@ -117,6 +139,48 @@ export const LinksTable = ({ links, onEdit, onDelete }: LinksTableProps) => {
     setIsStatsDialogOpen(true);
   };
 
+  const TagsDisplay = ({ tagsString }: { tagsString?: string }) => {
+    const [showAll, setShowAll] = useState(false);
+
+    if (!tagsString) {
+      return <span className="text-muted-foreground text-sm">-</span>;
+    }
+
+    const tagArray = tagsString.split(",").map((tag) => tag.trim()).filter(Boolean);
+    const visibleTags = showAll ? tagArray : tagArray.slice(0, 3);
+    const hasMore = tagArray.length > 3;
+
+    return (
+      <div className="flex flex-wrap gap-1" onClick={(e) => e.stopPropagation()}>
+        {visibleTags.map((tag, index) => (
+          <Badge key={index} variant="secondary" className="text-xs">
+            {tag}
+          </Badge>
+        ))}
+        {hasMore && !showAll && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-5 px-2 text-xs"
+            onClick={() => setShowAll(true)}
+          >
+            +{tagArray.length - 3} more
+          </Button>
+        )}
+        {hasMore && showAll && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-5 px-2 text-xs"
+            onClick={() => setShowAll(false)}
+          >
+            Show less
+          </Button>
+        )}
+      </div>
+    );
+  };
+
   if (links.length === 0) {
     return (
       <div className="text-center py-12 border rounded-lg">
@@ -135,6 +199,9 @@ export const LinksTable = ({ links, onEdit, onDelete }: LinksTableProps) => {
         categoryFilter={categoryFilter}
         onCategoryFilterChange={setCategoryFilter}
         categories={categories}
+        tagFilter={tagFilter}
+        onTagFilterChange={setTagFilter}
+        tags={tags}
       />
 
       {filteredLinks.length === 0 ? (
@@ -148,9 +215,11 @@ export const LinksTable = ({ links, onEdit, onDelete }: LinksTableProps) => {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Name</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>URL</TableHead>
                 <TableHead>Category</TableHead>
+                <TableHead>Tags</TableHead>
                 <TableHead>Last Checked</TableHead>
                 <TableHead>Created</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -165,6 +234,9 @@ export const LinksTable = ({ links, onEdit, onDelete }: LinksTableProps) => {
                 className="cursor-pointer hover:bg-muted/50"
                 onClick={() => router.push(`/dashboard/links/${link.id}`)}
               >
+                <TableCell className="font-medium">
+                  {link.name}
+                </TableCell>
                 <TableCell>
                   <Badge variant={config.variant} className="gap-1.5">
                     <div className={`h-2 w-2 rounded-full ${config.color}`} />
@@ -196,6 +268,9 @@ export const LinksTable = ({ links, onEdit, onDelete }: LinksTableProps) => {
                   ) : (
                     <span className="text-muted-foreground text-sm">-</span>
                   )}
+                </TableCell>
+                <TableCell>
+                  <TagsDisplay tagsString={link.tags} />
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
                   {link.last_checked_at

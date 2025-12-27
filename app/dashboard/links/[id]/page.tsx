@@ -203,7 +203,7 @@ export default function LinkDetailPage() {
     <DashboardLayout>
       <div className='space-y-6'>
         {/* Header */}
-        <div className='flex items-start justify-between'>
+        <div className='flex items-start justify-between flex-wrap gap-4 '>
           <div className='flex items-start gap-4 flex-1'>
             <Button variant='ghost' size='sm' onClick={() => router.push('/dashboard')}>
               <ArrowLeft className='h-4 w-4' />
@@ -231,7 +231,7 @@ export default function LinkDetailPage() {
               )}
             </div>
           </div>
-          <div className='flex items-center gap-2'>
+          <div className='flex items-center gap-2 flex-wrap'>
             <Button variant='outline' onClick={handleCheckNow}>
               <RefreshCw className='h-4 w-4' />
               Check Now
