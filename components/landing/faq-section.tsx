@@ -109,11 +109,22 @@ const FAQItem = ({ faq }: { faq: { question: string; answer: string } }) => {
           )}
         </span>
       </button>
-      {isOpen && (
+      <motion.div
+        initial={false}
+        animate={{
+          height: isOpen ? "auto" : 0,
+          opacity: isOpen ? 1 : 0,
+        }}
+        transition={{
+          height: { duration: 0.3, ease: "easeInOut" },
+          opacity: { duration: 0.2, ease: "easeInOut" },
+        }}
+        className="overflow-hidden"
+      >
         <div className="border-t border-zinc-200 px-6 py-4 dark:border-zinc-800">
           <p className="text-zinc-600 dark:text-zinc-400">{faq.answer}</p>
         </div>
-      )}
+      </motion.div>
     </motion.div>
   );
 };
