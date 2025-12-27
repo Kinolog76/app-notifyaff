@@ -16,6 +16,7 @@ import {
 import { LinksTable } from '@/components/links/links-table';
 import { AddLinkForm } from '@/components/links/add-link-form';
 import { BulkImportDialog } from '@/components/links/bulk-import-dialog';
+import { WorkspaceSelector } from '@/components/workspace/workspace-selector';
 
 interface Link {
   id: string;
@@ -25,6 +26,7 @@ interface Link {
   category?: string;
   tags?: string;
   status: 'active' | 'checking' | 'broken' | 'warning';
+  workspace_id?: string;
   created_at: string;
   updated_at: string;
   last_checked_at?: string;
@@ -33,17 +35,27 @@ interface Link {
 
 export default function LinksPage() {
   const [links, setLinks] = useState<Link[]>([]);
+  const [filteredLinks, setFilteredLinks] = useState<Link[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
   const [editingLink, setEditingLink] = useState<Link | null>(null);
   const [selectedLinks, setSelectedLinks] = useState<string[]>([]);
   const [isTogglingBulk, setIsTogglingBulk] = useState(false);
+  const [selectedWorkspace, setSelectedWorkspace] = useState<string>('all');
   const supabase = createClient();
 
   useEffect(() => {
     fetchLinks();
   }, []);
+
+  useEffect(() => {
+    if (selectedWorkspace === 'all') {
+      setFilteredLinks(links);
+    } else {
+      setFilteredLinks(links.filter(link => link.workspace_id === selectedWorkspace));
+    }
+  }, [links, selectedWorkspace]);
 
   const fetchLinks = async () => {
     setIsLoading(true);
@@ -186,14 +198,24 @@ export default function LinksPage() {
         </div>
 
         <Card className='p-6'>
-          <h2 className='text-lg font-semibold mb-4'>Your Links</h2>
+          <div className='flex items-center justify-between mb-4'>
+            <h2 className='text-lg font-semibold'>Your Links</h2>
+            <div className='w-64'>
+              <WorkspaceSelector
+                value={selectedWorkspace === 'all' ? undefined : selectedWorkspace}
+                onChange={(value) => setSelectedWorkspace(value)}
+                showAllOption={true}
+                onAllSelected={() => setSelectedWorkspace('all')}
+              />
+            </div>
+          </div>
           {isLoading ? (
             <div className='text-center py-12'>
               <p className='text-muted-foreground'>Loading links...</p>
             </div>
           ) : (
             <LinksTable
-              links={links}
+              links={filteredLinks}
               onEdit={handleEdit}
               onDelete={handleDelete}
               onRefresh={fetchLinks}

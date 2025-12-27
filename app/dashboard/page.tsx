@@ -18,6 +18,7 @@ import { AddLinkForm } from "@/components/links/add-link-form";
 import { LinksTable } from "@/components/links/links-table";
 import { BulkImportDialog } from "@/components/links/bulk-import-dialog";
 import { StatsOverviewCard } from "@/components/dashboard/stats-overview-card";
+import { WorkspaceGrid } from "@/components/workspace/workspace-grid";
 import { Plus, Upload } from "lucide-react";
 
 export default function DashboardPage() {
@@ -26,6 +27,7 @@ export default function DashboardPage() {
   const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
   const [editingLink, setEditingLink] = useState<any>(null);
   const [links, setLinks] = useState<any[]>([]);
+  const [workspaces, setWorkspaces] = useState<any[]>([]);
   const router = useRouter();
   const supabase = createClient();
 
@@ -40,6 +42,7 @@ export default function DashboardPage() {
       } else {
         setUser(user);
         fetchLinks();
+        fetchWorkspaces();
       }
     };
 
@@ -56,6 +59,43 @@ export default function DashboardPage() {
       console.error("Error fetching links:", error);
     } else {
       setLinks(data || []);
+    }
+  };
+
+  const fetchWorkspaces = async () => {
+    try {
+      const { data: workspacesData, error } = await supabase
+        .from("workspaces")
+        .select("*")
+        .order("is_default", { ascending: false })
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      // Fetch link counts for each workspace
+      const workspacesWithStats = await Promise.all(
+        (workspacesData || []).map(async (workspace) => {
+          const { data: links } = await supabase
+            .from("links")
+            .select("status")
+            .eq("workspace_id", workspace.id);
+
+          const linkCount = links?.length || 0;
+          const activeCount = links?.filter((l) => l.status === "active").length || 0;
+          const brokenCount = links?.filter((l) => l.status === "error").length || 0;
+
+          return {
+            ...workspace,
+            linkCount,
+            activeCount,
+            brokenCount,
+          };
+        })
+      );
+
+      setWorkspaces(workspacesWithStats);
+    } catch (error) {
+      console.error("Error fetching workspaces:", error);
     }
   };
 
@@ -141,11 +181,22 @@ export default function DashboardPage() {
 
         <StatsOverviewCard links={links} />
 
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-semibold">Your Workspaces</h2>
+          </div>
+          <WorkspaceGrid
+            workspaces={workspaces}
+            onCreateNew={() => router.push("/dashboard/workspaces/new")}
+            onRefresh={fetchWorkspaces}
+          />
+        </div>
+
         <Card className="p-6">
           <h2 className="text-lg font-semibold mb-4">
-            Your Links
+            Recent Links
           </h2>
-          <LinksTable links={links} onEdit={handleEdit} onDelete={handleDelete} />
+          <LinksTable links={links.slice(0, 10)} onEdit={handleEdit} onDelete={handleDelete} />
         </Card>
       </div>
 

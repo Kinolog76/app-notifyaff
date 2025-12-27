@@ -15,6 +15,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { WorkspaceSelector } from "@/components/workspace/workspace-selector";
 
 const linkFormSchema = z.object({
   url: z
@@ -31,6 +32,7 @@ const linkFormSchema = z.object({
     .max(100, "Name must be less than 100 characters"),
   category: z.string().optional(),
   tags: z.string().optional(),
+  workspace_id: z.string().optional(),
 });
 
 type LinkFormValues = z.infer<typeof linkFormSchema>;
@@ -41,15 +43,17 @@ interface Link {
   name: string;
   category?: string;
   tags?: string;
+  workspace_id?: string;
 }
 
 interface AddLinkFormProps {
   link?: Link | null;
+  workspaceId?: string;
   onSuccess?: () => void;
   onCancel?: () => void;
 }
 
-export const AddLinkForm = ({ link, onSuccess, onCancel }: AddLinkFormProps) => {
+export const AddLinkForm = ({ link, workspaceId, onSuccess, onCancel }: AddLinkFormProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const isEditing = !!link;
 
@@ -60,6 +64,7 @@ export const AddLinkForm = ({ link, onSuccess, onCancel }: AddLinkFormProps) => 
       name: link?.name || "",
       category: link?.category || "",
       tags: link?.tags || "",
+      workspace_id: workspaceId || link?.workspace_id || "",
     },
   });
 
@@ -69,8 +74,9 @@ export const AddLinkForm = ({ link, onSuccess, onCancel }: AddLinkFormProps) => 
       name: link?.name || "",
       category: link?.category || "",
       tags: link?.tags || "",
+      workspace_id: workspaceId || link?.workspace_id || "",
     });
-  }, [link, form]);
+  }, [link, workspaceId, form]);
 
   const onSubmit = async (data: LinkFormValues) => {
     setIsLoading(true);
@@ -176,6 +182,28 @@ export const AddLinkForm = ({ link, onSuccess, onCancel }: AddLinkFormProps) => 
             </FormItem>
           )}
         />
+
+        {!workspaceId && (
+          <FormField
+            control={form.control}
+            name="workspace_id"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Workspace</FormLabel>
+                <FormControl>
+                  <WorkspaceSelector
+                    value={field.value}
+                    onChange={field.onChange}
+                  />
+                </FormControl>
+                <FormDescription>
+                  Select which workspace this link belongs to
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
 
         <div className="flex gap-3 justify-end">
           {onCancel && (
