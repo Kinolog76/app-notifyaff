@@ -4,7 +4,9 @@ import { z } from "zod";
 
 const createLinkSchema = z.object({
   url: z.string().url("Invalid URL format"),
+  name: z.string().min(1, "Name is required"),
   category: z.string().optional(),
+  tags: z.string().optional(),
   short_url: z.string().optional(),
 });
 
@@ -28,19 +30,21 @@ export async function POST(request: Request) {
 
     if (!validation.success) {
       return NextResponse.json(
-        { error: "Validation failed", details: validation.error.errors },
+        { error: "Validation failed", details: validation.error.issues },
         { status: 400 }
       );
     }
 
-    const { url, category, short_url } = validation.data;
+    const { url, name, category, tags, short_url } = validation.data;
 
     const { data, error } = await supabase
       .from("links")
       .insert({
         user_id: user.id,
         url,
+        name,
         category: category || null,
+        tags: tags || null,
         short_url: short_url || null,
         status: "active",
       })

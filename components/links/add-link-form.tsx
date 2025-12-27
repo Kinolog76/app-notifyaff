@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -51,37 +51,63 @@ const categories = [
   "Other",
 ];
 
+interface Link {
+  id: string;
+  url: string;
+  name: string;
+  category?: string;
+  tags?: string;
+}
+
 interface AddLinkFormProps {
+  link?: Link | null;
   onSuccess?: () => void;
   onCancel?: () => void;
 }
 
-export const AddLinkForm = ({ onSuccess, onCancel }: AddLinkFormProps) => {
+export const AddLinkForm = ({ link, onSuccess, onCancel }: AddLinkFormProps) => {
   const [isLoading, setIsLoading] = useState(false);
+  const isEditing = !!link;
 
   const form = useForm<LinkFormValues>({
     resolver: zodResolver(linkFormSchema),
     defaultValues: {
-      url: "",
-      name: "",
-      category: "",
-      tags: "",
+      url: link?.url || "",
+      name: link?.name || "",
+      category: link?.category || "",
+      tags: link?.tags || "",
     },
   });
+
+  useEffect(() => {
+    form.reset({
+      url: link?.url || "",
+      name: link?.name || "",
+      category: link?.category || "",
+      tags: link?.tags || "",
+    });
+  }, [link, form]);
 
   const onSubmit = async (data: LinkFormValues) => {
     setIsLoading(true);
     try {
-      // TODO: Integrate with Supabase to save link
-      console.log("Form data:", data);
+      const response = await fetch(isEditing ? `/api/links/${link.id}` : "/api/links", {
+        method: isEditing ? "PUT" : "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      if (!response.ok) {
+        throw new Error(isEditing ? "Failed to update link" : "Failed to add link");
+      }
 
       form.reset();
       onSuccess?.();
     } catch (error) {
-      console.error("Error adding link:", error);
+      console.error("Error saving link:", error);
+      alert(error instanceof Error ? error.message : "An error occurred");
     } finally {
       setIsLoading(false);
     }
@@ -187,7 +213,7 @@ export const AddLinkForm = ({ onSuccess, onCancel }: AddLinkFormProps) => {
             </Button>
           )}
           <Button type="submit" disabled={isLoading}>
-            {isLoading ? "Adding..." : "Add Link"}
+            {isLoading ? (isEditing ? "Updating..." : "Adding...") : (isEditing ? "Update Link" : "Add Link")}
           </Button>
         </div>
       </form>

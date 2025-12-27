@@ -15,11 +15,17 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { AddLinkForm } from "@/components/links/add-link-form";
-import { Plus } from "lucide-react";
+import { LinksTable } from "@/components/links/links-table";
+import { BulkImportDialog } from "@/components/links/bulk-import-dialog";
+import { StatsOverviewCard } from "@/components/dashboard/stats-overview-card";
+import { Plus, Upload } from "lucide-react";
 
 export default function DashboardPage() {
   const [user, setUser] = useState<any>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
+  const [editingLink, setEditingLink] = useState<any>(null);
+  const [links, setLinks] = useState<any[]>([]);
   const router = useRouter();
   const supabase = createClient();
 
@@ -33,11 +39,25 @@ export default function DashboardPage() {
         router.push("/auth/login");
       } else {
         setUser(user);
+        fetchLinks();
       }
     };
 
     getUser();
   }, [router, supabase]);
+
+  const fetchLinks = async () => {
+    const { data, error } = await supabase
+      .from("links")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Error fetching links:", error);
+    } else {
+      setLinks(data || []);
+    }
+  };
 
   if (!user) {
     return null;
@@ -45,7 +65,37 @@ export default function DashboardPage() {
 
   const handleLinkAdded = () => {
     setIsDialogOpen(false);
-    // TODO: Refresh links list
+    setEditingLink(null);
+    fetchLinks();
+  };
+
+  const handleEdit = (link: any) => {
+    setEditingLink(link);
+    setIsDialogOpen(true);
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      const response = await fetch(`/api/links/${id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete link");
+      }
+
+      fetchLinks();
+    } catch (error) {
+      console.error("Error deleting link:", error);
+      alert("Failed to delete link");
+    }
+  };
+
+  const handleDialogChange = (open: boolean) => {
+    setIsDialogOpen(open);
+    if (!open) {
+      setEditingLink(null);
+    }
   };
 
   return (
@@ -60,64 +110,50 @@ export default function DashboardPage() {
               Welcome back, {user.email}
             </p>
           </div>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4" />
-                Add Link
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[550px]">
-              <DialogHeader>
-                <DialogTitle>Add New Affiliate Link</DialogTitle>
-                <DialogDescription>
-                  Add a new affiliate link to start monitoring its health and performance.
-                </DialogDescription>
-              </DialogHeader>
-              <AddLinkForm
-                onSuccess={handleLinkAdded}
-                onCancel={() => setIsDialogOpen(false)}
-              />
-            </DialogContent>
-          </Dialog>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setIsBulkImportOpen(true)}>
+              <Upload className="h-4 w-4" />
+              Import CSV
+            </Button>
+            <Dialog open={isDialogOpen} onOpenChange={handleDialogChange}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="h-4 w-4" />
+                  Add Link
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[550px]">
+                <DialogHeader>
+                  <DialogTitle>{editingLink ? "Edit Affiliate Link" : "Add New Affiliate Link"}</DialogTitle>
+                  <DialogDescription>
+                    {editingLink ? "Update your affiliate link details." : "Add a new affiliate link to start monitoring its health and performance."}
+                  </DialogDescription>
+                </DialogHeader>
+                <AddLinkForm
+                  link={editingLink}
+                  onSuccess={handleLinkAdded}
+                  onCancel={() => setIsDialogOpen(false)}
+                />
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-3">
-          <Card className="p-6">
-            <h3 className="text-sm font-medium text-muted-foreground">
-              Total Links
-            </h3>
-            <p className="mt-2 text-3xl font-bold">
-              0
-            </p>
-          </Card>
-          <Card className="p-6">
-            <h3 className="text-sm font-medium text-muted-foreground">
-              Active Links
-            </h3>
-            <p className="mt-2 text-3xl font-bold text-green-600">
-              0
-            </p>
-          </Card>
-          <Card className="p-6">
-            <h3 className="text-sm font-medium text-muted-foreground">
-              Broken Links
-            </h3>
-            <p className="mt-2 text-3xl font-bold text-red-600">
-              0
-            </p>
-          </Card>
-        </div>
+        <StatsOverviewCard links={links} />
 
         <Card className="p-6">
-          <h2 className="text-lg font-semibold">
+          <h2 className="text-lg font-semibold mb-4">
             Your Links
           </h2>
-          <p className="mt-4 text-center text-muted-foreground">
-            No links added yet. Start by adding your first affiliate link!
-          </p>
+          <LinksTable links={links} onEdit={handleEdit} onDelete={handleDelete} />
         </Card>
       </div>
+
+      <BulkImportDialog
+        isOpen={isBulkImportOpen}
+        onClose={() => setIsBulkImportOpen(false)}
+        onSuccess={fetchLinks}
+      />
     </DashboardLayout>
   );
 }

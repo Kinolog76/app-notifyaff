@@ -23,6 +23,7 @@
     "clsx": "^2.1.1",
     "lucide-react": "^0.562.0",
     "next": "16.1.1",
+    "papaparse": "^5.5.3",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-hook-form": "^7.69.0",
@@ -32,6 +33,7 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^25.0.3",
+    "@types/papaparse": "^5.5.2",
     "@types/react": "^19.2.7",
     "eslint": "^9",
     "eslint-config-next": "16.1.1",
