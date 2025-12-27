@@ -12,6 +12,7 @@ import {
   LogOut,
   Menu,
 } from "lucide-react";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -121,7 +122,11 @@ const SidebarContent = ({ onLinkClick }: { onLinkClick?: () => void }) => {
           })}
         </div>
 
-        <div className="mt-auto">
+        <div className="mt-auto space-y-2">
+          <div className="flex items-center justify-between px-3">
+            <span className="text-sm font-medium text-muted-foreground">Theme</span>
+            <ThemeToggle />
+          </div>
           <Button
             variant="ghost"
             className="w-full justify-start gap-3"
