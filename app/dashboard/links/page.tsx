@@ -199,6 +199,7 @@ export default function LinksPage() {
               onRefresh={fetchLinks}
               selectedLinks={selectedLinks}
               onSelectionChange={setSelectedLinks}
+              showCheckboxes={true}
             />
           )}
         </Card>

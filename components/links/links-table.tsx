@@ -55,6 +55,7 @@ interface LinksTableProps {
   onRefresh?: () => void;
   selectedLinks?: string[];
   onSelectionChange?: (selectedIds: string[]) => void;
+  showCheckboxes?: boolean;
 }
 
 const statusConfig = {
@@ -71,6 +72,7 @@ export const LinksTable = ({
   onRefresh,
   selectedLinks = [],
   onSelectionChange,
+  showCheckboxes = false,
 }: LinksTableProps) => {
   const router = useRouter();
   const supabase = createClient();
@@ -286,14 +288,16 @@ export const LinksTable = ({
           <Table className='w-full'>
             <TableHeader>
               <TableRow>
-                <TableHead className='w-12'>
-                  <Checkbox
-                    checked={isAllSelected}
-                    onCheckedChange={handleSelectAll}
-                    aria-label='Select all links'
-                    className={isSomeSelected ? 'data-[state=checked]:bg-primary/50' : ''}
-                  />
-                </TableHead>
+                {showCheckboxes && (
+                  <TableHead className='w-12'>
+                    <Checkbox
+                      checked={isAllSelected}
+                      onCheckedChange={handleSelectAll}
+                      aria-label='Select all links'
+                      className={isSomeSelected ? 'data-[state=checked]:bg-primary/50' : ''}
+                    />
+                  </TableHead>
+                )}
                 <TableHead>Name</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>URL</TableHead>
@@ -313,13 +317,15 @@ export const LinksTable = ({
                     className={`cursor-pointer hover:bg-muted/50 ${
                       link.tracking_enabled === false ? 'opacity-50' : ''
                     }`}>
-                    <TableCell onClick={(e) => e.stopPropagation()}>
-                      <Checkbox
-                        checked={selectedLinks.includes(link.id)}
-                        onCheckedChange={(checked) => handleSelectLink(link.id, checked as boolean)}
-                        aria-label={`Select ${link.name}`}
-                      />
-                    </TableCell>
+                    {showCheckboxes && (
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <Checkbox
+                          checked={selectedLinks.includes(link.id)}
+                          onCheckedChange={(checked) => handleSelectLink(link.id, checked as boolean)}
+                          aria-label={`Select ${link.name}`}
+                        />
+                      </TableCell>
+                    )}
                     <TableCell
                       className='font-medium'
                       onClick={() => router.push(`/dashboard/links/${link.id}`)}>
