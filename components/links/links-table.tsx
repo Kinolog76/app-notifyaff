@@ -9,8 +9,6 @@ import {
   Trash2,
   Eye,
   BarChart3,
-  Power,
-  PowerOff,
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -44,17 +42,15 @@ interface Workspace {
 interface Link {
   id: string;
   url: string;
-  name: string;
   short_url?: string;
   category?: string;
-  tags?: string;
+  tags?: string[];
   status: 'active' | 'checking' | 'broken' | 'warning';
   workspace_id?: string;
   workspaces?: Workspace;
   created_at: string;
   updated_at: string;
   last_checked_at?: string;
-  tracking_enabled?: boolean;
 }
 
 interface LinksTableProps {
@@ -84,9 +80,7 @@ export const LinksTable = ({
   showCheckboxes = false,
 }: LinksTableProps) => {
   const router = useRouter();
-  const supabase = createClient();
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [togglingId, setTogglingId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
@@ -109,9 +103,8 @@ export const LinksTable = ({
   const tags = useMemo(() => {
     const uniqueTags = new Set<string>();
     links.forEach((link) => {
-      if (link.tags) {
-        const linkTags = link.tags.split(',').map((tag) => tag.trim());
-        linkTags.forEach((tag) => {
+      if (link.tags && Array.isArray(link.tags)) {
+        link.tags.forEach((tag) => {
           if (tag) uniqueTags.add(tag);
         });
       }
@@ -128,7 +121,7 @@ export const LinksTable = ({
         link.url.toLowerCase().includes(searchQuery.toLowerCase()) ||
         link.short_url?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         link.category?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        link.tags?.toLowerCase().includes(searchQuery.toLowerCase());
+        link.tags?.some((tag) => tag.toLowerCase().includes(searchQuery.toLowerCase()));
 
       // Status filter
       const matchesStatus = statusFilter === 'all' || link.status === statusFilter;
@@ -139,11 +132,7 @@ export const LinksTable = ({
       // Tag filter
       const matchesTag =
         tagFilter === 'all' ||
-        (link.tags &&
-          link.tags
-            .split(',')
-            .map((t) => t.trim())
-            .includes(tagFilter));
+        (link.tags && link.tags.includes(tagFilter));
 
       return matchesSearch && matchesStatus && matchesCategory && matchesTag;
     });
@@ -160,29 +149,6 @@ export const LinksTable = ({
     }
   };
 
-  const handleToggleTracking = async (link: Link) => {
-    const newTrackingState = !link.tracking_enabled;
-    const action = newTrackingState ? 'enable' : 'disable';
-
-    if (!confirm(`Are you sure you want to ${action} tracking for this link?`)) return;
-
-    setTogglingId(link.id);
-    try {
-      const { error } = await supabase
-        .from('links')
-        .update({ tracking_enabled: newTrackingState })
-        .eq('id', link.id);
-
-      if (error) {
-        console.error('Error toggling tracking:', error);
-        alert('Failed to update tracking status');
-      } else {
-        onRefresh?.();
-      }
-    } finally {
-      setTogglingId(null);
-    }
-  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -220,19 +186,15 @@ export const LinksTable = ({
   const isAllSelected = filteredLinks.length > 0 && selectedLinks.length === filteredLinks.length;
   const isSomeSelected = selectedLinks.length > 0 && selectedLinks.length < filteredLinks.length;
 
-  const TagsDisplay = ({ tagsString }: { tagsString?: string }) => {
+  const TagsDisplay = ({ tagsArray }: { tagsArray?: string[] }) => {
     const [showAll, setShowAll] = useState(false);
 
-    if (!tagsString) {
+    if (!tagsArray || tagsArray.length === 0) {
       return <span className='text-muted-foreground text-sm'>-</span>;
     }
 
-    const tagArray = tagsString
-      .split(',')
-      .map((tag) => tag.trim())
-      .filter(Boolean);
-    const visibleTags = showAll ? tagArray : tagArray.slice(0, 3);
-    const hasMore = tagArray.length > 3;
+    const visibleTags = showAll ? tagsArray : tagsArray.slice(0, 3);
+    const hasMore = tagsArray.length > 3;
 
     return (
       <div className='flex flex-wrap gap-1' onClick={(e) => e.stopPropagation()}>
@@ -247,7 +209,7 @@ export const LinksTable = ({
             size='sm'
             className='h-5 px-2 text-xs'
             onClick={() => setShowAll(true)}>
-            +{tagArray.length - 3} more
+            +{tagsArray.length - 3} more
           </Button>
         )}
         {hasMore && showAll && (
@@ -307,9 +269,8 @@ export const LinksTable = ({
                     />
                   </TableHead>
                 )}
-                <TableHead>Name</TableHead>
-                <TableHead>Status</TableHead>
                 <TableHead>URL</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead>Workspace</TableHead>
                 <TableHead>Category</TableHead>
                 <TableHead>Tags</TableHead>
@@ -324,9 +285,7 @@ export const LinksTable = ({
                 return (
                   <TableRow
                     key={link.id}
-                    className={`cursor-pointer hover:bg-muted/50 ${
-                      link.tracking_enabled === false ? 'opacity-50' : ''
-                    }`}>
+                    className='cursor-pointer hover:bg-muted/50'>
                     {showCheckboxes && (
                       <TableCell onClick={(e) => e.stopPropagation()}>
                         <Checkbox
@@ -334,28 +293,10 @@ export const LinksTable = ({
                           onCheckedChange={(checked) =>
                             handleSelectLink(link.id, checked as boolean)
                           }
-                          aria-label={`Select ${link.name}`}
+                          aria-label={`Select link ${link.id}`}
                         />
                       </TableCell>
                     )}
-                    <TableCell
-                      className='font-medium'
-                      onClick={() => router.push(`/dashboard/links/${link.id}`)}>
-                      <div className='flex items-center text-wrap gap-2'>
-                        {link.name}
-                        {link.tracking_enabled === false && (
-                          <Badge variant='outline' className='text-xs'>
-                            Tracking Off
-                          </Badge>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell onClick={() => router.push(`/dashboard/links/${link.id}`)}>
-                      <Badge variant={config.variant} className='gap-1.5'>
-                        <div className={`h-2 w-2 rounded-full ${config.color}`} />
-                        {config.label}
-                      </Badge>
-                    </TableCell>
                     <TableCell className='max-w-md'>
                       <div className='flex flex-col gap-1'>
                         <a
@@ -373,6 +314,12 @@ export const LinksTable = ({
                           </span>
                         )}
                       </div>
+                    </TableCell>
+                    <TableCell onClick={() => router.push(`/dashboard/links/${link.id}`)}>
+                      <Badge variant={config.variant} className='gap-1.5'>
+                        <div className={`h-2 w-2 rounded-full ${config.color}`} />
+                        {config.label}
+                      </Badge>
                     </TableCell>
                     <TableCell onClick={() => router.push(`/dashboard/links/${link.id}`)}>
                       {link.workspaces ? (
@@ -397,7 +344,7 @@ export const LinksTable = ({
                       )}
                     </TableCell>
                     <TableCell onClick={() => router.push(`/dashboard/links/${link.id}`)}>
-                      <TagsDisplay tagsString={link.tags} />
+                      <TagsDisplay tagsArray={link.tags} />
                     </TableCell>
                     <TableCell
                       className='text-sm text-muted-foreground'
@@ -441,23 +388,6 @@ export const LinksTable = ({
                             className='cursor-pointer'>
                             <ExternalLink className='mr-2 h-4 w-4' />
                             Open Link
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            onClick={() => handleToggleTracking(link)}
-                            disabled={togglingId === link.id}
-                            className='cursor-pointer'>
-                            {link.tracking_enabled ? (
-                              <>
-                                <PowerOff className='mr-2 h-4 w-4' />
-                                {togglingId === link.id ? 'Disabling...' : 'Disable Tracking'}
-                              </>
-                            ) : (
-                              <>
-                                <Power className='mr-2 h-4 w-4' />
-                                {togglingId === link.id ? 'Enabling...' : 'Enable Tracking'}
-                              </>
-                            )}
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem

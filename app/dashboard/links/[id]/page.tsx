@@ -16,8 +16,6 @@ import {
   Clock,
   TrendingUp,
   AlertCircle,
-  Power,
-  PowerOff,
 } from 'lucide-react';
 import {
   Table,
@@ -47,15 +45,13 @@ interface Workspace {
 interface Link {
   id: string;
   url: string;
-  name: string;
   short_url?: string;
   category?: string;
-  tags?: string;
+  tags?: string[];
   status: 'active' | 'checking' | 'broken' | 'warning';
   created_at: string;
   updated_at: string;
   last_checked_at?: string;
-  tracking_enabled?: boolean;
   workspace_id?: string;
   workspaces?: Workspace;
 }
@@ -82,7 +78,6 @@ export default function LinkDetailPage() {
   const [checks, setChecks] = useState<LinkCheck[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isTogglingTracking, setIsTogglingTracking] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const router = useRouter();
   const params = useParams();
@@ -178,29 +173,8 @@ export default function LinkDetailPage() {
   };
 
   const handleToggleTracking = async () => {
-    if (!link) return;
-
-    const newTrackingState = !link.tracking_enabled;
-    const action = newTrackingState ? 'enable' : 'disable';
-
-    if (!confirm(`Are you sure you want to ${action} tracking for this link?`)) return;
-
-    setIsTogglingTracking(true);
-    try {
-      const { error } = await supabase
-        .from('links')
-        .update({ tracking_enabled: newTrackingState })
-        .eq('id', linkId);
-
-      if (error) {
-        console.error('Error toggling tracking:', error);
-        alert('Failed to update tracking status');
-      } else {
-        await fetchLinkDetails();
-      }
-    } finally {
-      setIsTogglingTracking(false);
-    }
+    // This feature has been removed as tracking_enabled field doesn't exist in new schema
+    alert('Tracking toggle feature is deprecated');
   };
 
   const handleEditSuccess = async () => {
@@ -295,7 +269,6 @@ export default function LinkDetailPage() {
                   <div className={`h-2 w-2 rounded-full ${config.color}`} />
                   {config.label}
                 </Badge>
-                {link.tracking_enabled === false && <Badge variant='outline'>Tracking Off</Badge>}
               </div>
               <a
                 href={link.url}
@@ -314,19 +287,6 @@ export default function LinkDetailPage() {
             <Button variant='outline' onClick={handleCheckNow}>
               <RefreshCw className='h-4 w-4' />
               Check Now
-            </Button>
-            <Button variant='outline' onClick={handleToggleTracking} disabled={isTogglingTracking}>
-              {link.tracking_enabled ? (
-                <>
-                  <PowerOff className='h-4 w-4' />
-                  {isTogglingTracking ? 'Disabling...' : 'Disable Tracking'}
-                </>
-              ) : (
-                <>
-                  <Power className='h-4 w-4' />
-                  {isTogglingTracking ? 'Enabling...' : 'Enable Tracking'}
-                </>
-              )}
             </Button>
             <Button variant='outline' onClick={() => setIsEditDialogOpen(true)}>
               <Pencil className='h-4 w-4' />
@@ -428,13 +388,13 @@ export default function LinkDetailPage() {
                 <p className='font-medium'>{link.short_url}</p>
               </div>
             )}
-            {link.tags && (
+            {link.tags && link.tags.length > 0 && (
               <div>
                 <p className='text-sm text-muted-foreground'>Tags</p>
-                <div className='flex gap-2 mt-1'>
-                  {link.tags.split(',').map((tag, index) => (
+                <div className='flex gap-2 mt-1 flex-wrap'>
+                  {link.tags.map((tag, index) => (
                     <Badge key={index} variant='secondary'>
-                      {tag.trim()}
+                      {tag}
                     </Badge>
                   ))}
                 </div>

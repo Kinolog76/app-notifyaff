@@ -4,9 +4,8 @@ import { z } from "zod";
 
 const updateLinkSchema = z.object({
   url: z.string().url("Invalid URL format").optional(),
-  name: z.string().min(1, "Name is required").optional(),
   category: z.string().optional(),
-  tags: z.string().optional(),
+  tags: z.array(z.string()).optional(),
   short_url: z.string().optional(),
   status: z.enum(["active", "checking", "broken", "warning"]).optional(),
 });

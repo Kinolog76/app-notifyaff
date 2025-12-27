@@ -4,9 +4,8 @@ import { z } from "zod";
 
 const createLinkSchema = z.object({
   url: z.string().url("Invalid URL format"),
-  name: z.string().min(1, "Name is required"),
   category: z.string().optional(),
-  tags: z.string().optional(),
+  tags: z.array(z.string()).optional(),
   short_url: z.string().optional(),
   workspace_id: z.string().optional(),
 });
@@ -36,19 +35,18 @@ export async function POST(request: Request) {
       );
     }
 
-    const { url, name, category, tags, short_url, workspace_id } = validation.data;
+    const { url, category, tags, short_url, workspace_id } = validation.data;
 
     const { data, error } = await supabase
       .from("links")
       .insert({
         user_id: user.id,
         url,
-        name,
         category: category || null,
         tags: tags || null,
         short_url: short_url || null,
         workspace_id: workspace_id || null,
-        status: "active",
+        status: "checking",
       })
       .select()
       .single();

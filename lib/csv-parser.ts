@@ -3,7 +3,6 @@ import { z } from "zod";
 
 const linkSchema = z.object({
   url: z.string().url("Invalid URL format"),
-  name: z.string().min(1, "Name is required"),
   category: z.string().optional(),
   tags: z.string().optional(),
 });
@@ -36,7 +35,6 @@ export const parseCSV = (file: File): Promise<ParseResult> => {
           try {
             const validated = linkSchema.parse({
               url: row.url || row.URL,
-              name: row.name || row.Name,
               category: row.category || row.Category || undefined,
               tags: row.tags || row.Tags || undefined,
             });
@@ -84,10 +82,9 @@ export const parseCSV = (file: File): Promise<ParseResult> => {
 export const generateCSVTemplate = () => {
   const delimiter = ";";
 
-  const headers = ["url", "name", "category", "tags"];
+  const headers = ["url", "category", "tags"];
   const exampleRow = [
     "https://example.com/affiliate/abc123",
-    "Example Product",
     "amazon",
     "fashion, summer",
   ];

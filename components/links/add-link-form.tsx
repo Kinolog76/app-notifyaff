@@ -26,12 +26,8 @@ const linkFormSchema = z.object({
       (url) => url.startsWith("http://") || url.startsWith("https://"),
       "URL must start with http:// or https://"
     ),
-  name: z
-    .string()
-    .min(1, "Name is required")
-    .max(100, "Name must be less than 100 characters"),
   category: z.string().optional(),
-  tags: z.string().optional(),
+  tags: z.array(z.string()).optional(),
   workspace_id: z.string().optional(),
 });
 
@@ -40,9 +36,8 @@ type LinkFormValues = z.infer<typeof linkFormSchema>;
 interface Link {
   id: string;
   url: string;
-  name: string;
   category?: string;
-  tags?: string;
+  tags?: string[];
   workspace_id?: string;
 }
 
@@ -61,9 +56,8 @@ export const AddLinkForm = ({ link, workspaceId, onSuccess, onCancel }: AddLinkF
     resolver: zodResolver(linkFormSchema),
     defaultValues: {
       url: link?.url || "",
-      name: link?.name || "",
       category: link?.category || "",
-      tags: link?.tags || "",
+      tags: link?.tags || [],
       workspace_id: workspaceId || link?.workspace_id || "",
     },
   });
@@ -71,9 +65,8 @@ export const AddLinkForm = ({ link, workspaceId, onSuccess, onCancel }: AddLinkF
   useEffect(() => {
     form.reset({
       url: link?.url || "",
-      name: link?.name || "",
       category: link?.category || "",
-      tags: link?.tags || "",
+      tags: link?.tags || [],
       workspace_id: workspaceId || link?.workspace_id || "",
     });
   }, [link, workspaceId, form]);
@@ -128,23 +121,6 @@ export const AddLinkForm = ({ link, workspaceId, onSuccess, onCancel }: AddLinkF
 
         <FormField
           control={form.control}
-          name="name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Link Name</FormLabel>
-              <FormControl>
-                <Input placeholder="Product name or description" {...field} />
-              </FormControl>
-              <FormDescription>
-                A friendly name to identify this link
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
           name="category"
           render={({ field }) => (
             <FormItem>
@@ -172,7 +148,14 @@ export const AddLinkForm = ({ link, workspaceId, onSuccess, onCancel }: AddLinkF
               <FormControl>
                 <Input
                   placeholder="fashion, summer, promotion (comma-separated)"
-                  {...field}
+                  value={field.value?.join(", ") || ""}
+                  onChange={(e) => {
+                    const tags = e.target.value
+                      .split(",")
+                      .map((tag) => tag.trim())
+                      .filter(Boolean);
+                    field.onChange(tags);
+                  }}
                 />
               </FormControl>
               <FormDescription>

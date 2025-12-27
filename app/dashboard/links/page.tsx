@@ -5,7 +5,7 @@ import { createClient } from '@/utils/supabase/client';
 import { DashboardLayout } from '@/components/dashboard/dashboard-layout';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Plus, Upload, Power, PowerOff } from 'lucide-react';
+import { Plus, Upload } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -28,17 +28,15 @@ interface Workspace {
 interface Link {
   id: string;
   url: string;
-  name: string;
   short_url?: string;
   category?: string;
-  tags?: string;
+  tags?: string[];
   status: 'active' | 'checking' | 'broken' | 'warning';
   workspace_id?: string;
   workspaces?: Workspace;
   created_at: string;
   updated_at: string;
   last_checked_at?: string;
-  tracking_enabled?: boolean;
 }
 
 export default function LinksPage() {
@@ -157,13 +155,12 @@ export default function LinksPage() {
     setEditingLink(null);
   };
 
-  const handleBulkToggleTracking = async (enable: boolean) => {
+  const handleBulkDelete = async () => {
     if (selectedLinks.length === 0) return;
 
-    const action = enable ? 'enable' : 'disable';
     if (
       !confirm(
-        `Are you sure you want to ${action} tracking for ${selectedLinks.length} selected link(s)?`,
+        `Are you sure you want to delete ${selectedLinks.length} selected link(s)?`,
       )
     )
       return;
@@ -172,12 +169,12 @@ export default function LinksPage() {
     try {
       const { error } = await supabase
         .from('links')
-        .update({ tracking_enabled: enable })
+        .delete()
         .in('id', selectedLinks);
 
       if (error) {
-        console.error('Error toggling bulk tracking:', error);
-        alert('Failed to update tracking status');
+        console.error('Error deleting links:', error);
+        alert('Failed to delete links');
       } else {
         setSelectedLinks([]);
         await fetchLinks();
@@ -199,22 +196,12 @@ export default function LinksPage() {
           </div>
           <div className='flex gap-2'>
             {selectedLinks.length > 0 && (
-              <>
-                <Button
-                  variant='outline'
-                  onClick={() => handleBulkToggleTracking(false)}
-                  disabled={isTogglingBulk}>
-                  <PowerOff className='h-4 w-4' />
-                  Disable Tracking ({selectedLinks.length})
-                </Button>
-                <Button
-                  variant='outline'
-                  onClick={() => handleBulkToggleTracking(true)}
-                  disabled={isTogglingBulk}>
-                  <Power className='h-4 w-4' />
-                  Enable Tracking ({selectedLinks.length})
-                </Button>
-              </>
+              <Button
+                variant='destructive'
+                onClick={handleBulkDelete}
+                disabled={isTogglingBulk}>
+                Bulk Delete ({selectedLinks.length})
+              </Button>
             )}
             <Button variant='outline' onClick={() => setIsBulkImportOpen(true)}>
               <Upload className='h-4 w-4' />

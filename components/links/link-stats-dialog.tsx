@@ -32,9 +32,9 @@ import {
 interface Link {
   id: string;
   url: string;
-  name: string;
   short_url?: string;
   category?: string;
+  tags?: string[];
   status: 'active' | 'checking' | 'broken' | 'warning';
   created_at: string;
   last_checked_at?: string;
