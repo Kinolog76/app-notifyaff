@@ -107,6 +107,21 @@ export async function DELETE(
       );
     }
 
+    // First, set workspace_id to NULL for all links in this workspace
+    const { error: unlinkError } = await supabase
+      .from("links")
+      .update({ workspace_id: null })
+      .eq("workspace_id", id)
+      .eq("user_id", user.id);
+
+    if (unlinkError) {
+      return NextResponse.json(
+        { error: "Failed to unlink workspace links", details: unlinkError.message },
+        { status: 500 }
+      );
+    }
+
+    // Then delete the workspace
     const { error } = await supabase
       .from("workspaces")
       .delete()

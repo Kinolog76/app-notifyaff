@@ -19,12 +19,14 @@ import { LinksTable } from "@/components/links/links-table";
 import { BulkImportDialog } from "@/components/links/bulk-import-dialog";
 import { StatsOverviewCard } from "@/components/dashboard/stats-overview-card";
 import { WorkspaceGrid } from "@/components/workspace/workspace-grid";
+import { WorkspaceModal } from "@/components/workspace/workspace-modal";
 import { Plus, Upload } from "lucide-react";
 
 export default function DashboardPage() {
   const [user, setUser] = useState<any>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
+  const [isWorkspaceModalOpen, setIsWorkspaceModalOpen] = useState(false);
   const [editingLink, setEditingLink] = useState<any>(null);
   const [links, setLinks] = useState<any[]>([]);
   const [workspaces, setWorkspaces] = useState<any[]>([]);
@@ -187,7 +189,7 @@ export default function DashboardPage() {
           </div>
           <WorkspaceGrid
             workspaces={workspaces}
-            onCreateNew={() => router.push("/dashboard/workspaces/new")}
+            onCreateNew={() => setIsWorkspaceModalOpen(true)}
             onRefresh={fetchWorkspaces}
           />
         </div>
@@ -204,6 +206,12 @@ export default function DashboardPage() {
         isOpen={isBulkImportOpen}
         onClose={() => setIsBulkImportOpen(false)}
         onSuccess={fetchLinks}
+      />
+
+      <WorkspaceModal
+        isOpen={isWorkspaceModalOpen}
+        onClose={() => setIsWorkspaceModalOpen(false)}
+        onSuccess={fetchWorkspaces}
       />
     </DashboardLayout>
   );

@@ -23,6 +23,7 @@ interface WorkspaceSelectorProps {
   onCreateNew?: () => void;
   showAllOption?: boolean;
   onAllSelected?: () => void;
+  showNoneOption?: boolean;
 }
 
 export function WorkspaceSelector({
@@ -31,6 +32,7 @@ export function WorkspaceSelector({
   onCreateNew,
   showAllOption,
   onAllSelected,
+  showNoneOption = true,
 }: WorkspaceSelectorProps) {
   const supabase = createClient();
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
@@ -60,6 +62,8 @@ export function WorkspaceSelector({
       onCreateNew();
     } else if (newValue === 'all' && onAllSelected) {
       onAllSelected();
+    } else if (newValue === 'none') {
+      onChange('');
     } else {
       onChange(newValue);
     }
@@ -76,10 +80,12 @@ export function WorkspaceSelector({
   }
 
   return (
-    <Select value={value} onValueChange={handleValueChange}>
+    <Select value={value || 'none'} onValueChange={handleValueChange}>
       <SelectTrigger className='w-full'>
         <SelectValue placeholder='Select workspace'>
-          {value && workspaces.find((w) => w.id === value) && (
+          {!value ? (
+            <span className='text-muted-foreground'>No workspace</span>
+          ) : value && workspaces.find((w) => w.id === value) ? (
             <div className='flex items-center gap-2'>
               <div
                 className='h-3 w-3 rounded-full'
@@ -93,10 +99,15 @@ export function WorkspaceSelector({
                 {workspaces.find((w) => w.id === value)?.name}
               </span>
             </div>
-          )}
+          ) : null}
         </SelectValue>
       </SelectTrigger>
       <SelectContent>
+        {showNoneOption && (
+          <SelectItem value='none'>
+            <span className='text-muted-foreground'>No workspace</span>
+          </SelectItem>
+        )}
         {showAllOption && (
           <SelectItem value='all'>
             <span className='font-medium'>All Workspaces</span>

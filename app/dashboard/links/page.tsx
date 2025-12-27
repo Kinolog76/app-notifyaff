@@ -18,6 +18,13 @@ import { AddLinkForm } from '@/components/links/add-link-form';
 import { BulkImportDialog } from '@/components/links/bulk-import-dialog';
 import { WorkspaceSelector } from '@/components/workspace/workspace-selector';
 
+interface Workspace {
+  id: string;
+  name: string;
+  icon: string | null;
+  color: string;
+}
+
 interface Link {
   id: string;
   url: string;
@@ -27,6 +34,7 @@ interface Link {
   tags?: string;
   status: 'active' | 'checking' | 'broken' | 'warning';
   workspace_id?: string;
+  workspaces?: Workspace;
   created_at: string;
   updated_at: string;
   last_checked_at?: string;
@@ -62,7 +70,7 @@ export default function LinksPage() {
     try {
       const { data, error } = await supabase
         .from('links')
-        .select('*')
+        .select('*, workspaces(id, name, icon, color)')
         .order('created_at', { ascending: false });
 
       if (error) {

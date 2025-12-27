@@ -8,6 +8,7 @@ const createLinkSchema = z.object({
   category: z.string().optional(),
   tags: z.string().optional(),
   short_url: z.string().optional(),
+  workspace_id: z.string().optional(),
 });
 
 export async function POST(request: Request) {
@@ -35,7 +36,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const { url, name, category, tags, short_url } = validation.data;
+    const { url, name, category, tags, short_url, workspace_id } = validation.data;
 
     const { data, error } = await supabase
       .from("links")
@@ -46,6 +47,7 @@ export async function POST(request: Request) {
         category: category || null,
         tags: tags || null,
         short_url: short_url || null,
+        workspace_id: workspace_id || null,
         status: "active",
       })
       .select()

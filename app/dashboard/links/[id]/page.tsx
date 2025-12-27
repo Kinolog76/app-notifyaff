@@ -36,6 +36,14 @@ import {
 } from '@/components/ui/dialog';
 import { AddLinkForm } from '@/components/links/add-link-form';
 
+interface Workspace {
+  id: string;
+  name: string;
+  description?: string;
+  icon?: string;
+  color?: string;
+}
+
 interface Link {
   id: string;
   url: string;
@@ -48,6 +56,8 @@ interface Link {
   updated_at: string;
   last_checked_at?: string;
   tracking_enabled?: boolean;
+  workspace_id?: string;
+  workspaces?: Workspace;
 }
 
 interface LinkCheck {
@@ -98,7 +108,11 @@ export default function LinkDetailPage() {
 
   const fetchLinkDetails = async () => {
     setIsLoading(true);
-    const { data, error } = await supabase.from('links').select('*').eq('id', linkId).single();
+    const { data, error } = await supabase
+      .from('links')
+      .select('*, workspaces(*)')
+      .eq('id', linkId)
+      .single();
 
     if (error) {
       console.error('Error fetching link:', error);
@@ -274,11 +288,9 @@ export default function LinkDetailPage() {
                 {link.url}
                 <ExternalLink className='h-3 w-3' />
               </a>
-              {link.category && (
-                <Badge variant='outline' className='mt-2'>
-                  {link.category}
-                </Badge>
-              )}
+              <div className='flex items-center gap-2 mt-2 flex-wrap'>
+                {link.category && <Badge variant='outline'>{link.category}</Badge>}
+              </div>
             </div>
           </div>
           <div className='flex items-center gap-2 flex-wrap'>
@@ -367,6 +379,20 @@ export default function LinkDetailPage() {
         <Card className='p-6'>
           <h2 className='text-lg font-semibold mb-4'>Link Information</h2>
           <div className='grid gap-4 md:grid-cols-2'>
+            {link.workspaces && (
+              <div>
+                <p className='text-sm text-muted-foreground'>Workspace</p>
+                <div className='flex items-center gap-2 mt-1'>
+                  <Badge
+                    variant='outline'
+                    className='gap-1.5'
+                    style={{ borderColor: link.workspaces.color }}>
+                    {link.workspaces.icon && <span>{link.workspaces.icon}</span>}
+                    {link.workspaces.name}
+                  </Badge>
+                </div>
+              </div>
+            )}
             <div>
               <p className='text-sm text-muted-foreground'>Created At</p>
               <p className='font-medium' suppressHydrationWarning>

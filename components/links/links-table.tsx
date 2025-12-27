@@ -34,6 +34,13 @@ import { LinksFilters } from './links-filters';
 import { LinkStatsDialog } from './link-stats-dialog';
 import { createClient } from '@/utils/supabase/client';
 
+interface Workspace {
+  id: string;
+  name: string;
+  icon: string | null;
+  color: string;
+}
+
 interface Link {
   id: string;
   url: string;
@@ -42,6 +49,8 @@ interface Link {
   category?: string;
   tags?: string;
   status: 'active' | 'checking' | 'broken' | 'warning';
+  workspace_id?: string;
+  workspaces?: Workspace;
   created_at: string;
   updated_at: string;
   last_checked_at?: string;
@@ -301,6 +310,7 @@ export const LinksTable = ({
                 <TableHead>Name</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>URL</TableHead>
+                <TableHead>Workspace</TableHead>
                 <TableHead>Category</TableHead>
                 <TableHead>Tags</TableHead>
                 <TableHead>Last Checked</TableHead>
@@ -321,7 +331,9 @@ export const LinksTable = ({
                       <TableCell onClick={(e) => e.stopPropagation()}>
                         <Checkbox
                           checked={selectedLinks.includes(link.id)}
-                          onCheckedChange={(checked) => handleSelectLink(link.id, checked as boolean)}
+                          onCheckedChange={(checked) =>
+                            handleSelectLink(link.id, checked as boolean)
+                          }
                           aria-label={`Select ${link.name}`}
                         />
                       </TableCell>
@@ -344,9 +356,7 @@ export const LinksTable = ({
                         {config.label}
                       </Badge>
                     </TableCell>
-                    <TableCell
-                      className='max-w-md'
-                      onClick={() => router.push(`/dashboard/links/${link.id}`)}>
+                    <TableCell className='max-w-md'>
                       <div className='flex flex-col gap-1'>
                         <a
                           href={link.url}
@@ -363,6 +373,21 @@ export const LinksTable = ({
                           </span>
                         )}
                       </div>
+                    </TableCell>
+                    <TableCell onClick={() => router.push(`/dashboard/links/${link.id}`)}>
+                      {link.workspaces ? (
+                        <div className='flex items-center gap-2'>
+                          <div
+                            className='h-3 w-3 rounded-full'
+                            style={{ backgroundColor: link.workspaces.color }}
+                          />
+                          <span className='text-sm'>
+                            {link.workspaces.icon} {link.workspaces.name}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className='text-muted-foreground text-sm'>-</span>
+                      )}
                     </TableCell>
                     <TableCell onClick={() => router.push(`/dashboard/links/${link.id}`)}>
                       {link.category ? (
