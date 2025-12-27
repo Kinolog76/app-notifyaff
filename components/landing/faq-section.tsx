@@ -6,9 +6,9 @@ import { useState } from "react";
 
 const faqs = [
   {
-    question: "How does the 14-day free trial work?",
+    question: "How does the free plan work?",
     answer:
-      "Start using NotifyAff immediately with full access to all features. No credit card required. After 14 days, choose a paid plan or continue with our free tier (25 links, weekly checks).",
+      "Start using NotifyAff immediately with our free plan (25 links, weekly checks, basic dashboard). No credit card required. Upgrade to a paid plan anytime to unlock more links, frequent checks, and advanced features.",
   },
   {
     question: "How often are my affiliate links checked?",
@@ -53,7 +53,7 @@ const faqs = [
   {
     question: "Do you offer refunds?",
     answer:
-      "Yes, we offer a 14-day money-back guarantee for first-time subscribers. If you're not satisfied, contact support within 14 days for a full refund.",
+      "Yes, we offer a 30-day money-back guarantee for first-time subscribers. If you're not satisfied, contact support within 30 days of your first payment for a full refund.",
   },
   {
     question: "How do webhooks and integrations work?",

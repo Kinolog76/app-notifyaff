@@ -97,9 +97,9 @@ export default function TermsOfServicePage() {
             <li>You are responsible for all taxes, if applicable</li>
           </ul>
 
-          <h3 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50 mt-6">4.3 Free Trial</h3>
+          <h3 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50 mt-6">4.3 Free Plan</h3>
           <p className="text-zinc-600 dark:text-zinc-400">
-            We may offer a 14-day free trial for new users. No credit card is required during the trial. At the end of the trial, you must select a paid plan or your account will revert to the FREE plan.
+            All users start with our FREE plan (25 links, weekly checks, basic dashboard). No credit card is required. You can upgrade to a paid plan anytime to access additional features and higher limits.
           </p>
 
           <h3 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50 mt-6">4.4 Automatic Renewal</h3>
@@ -109,9 +109,9 @@ export default function TermsOfServicePage() {
 
           <h3 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50 mt-6">4.5 Refund Policy</h3>
           <ul className="list-disc pl-6 text-zinc-600 dark:text-zinc-400">
-            <li>We offer a 14-day money-back guarantee for first-time subscribers</li>
+            <li>We offer a 30-day money-back guarantee for first-time subscribers</li>
             <li>Refunds are issued to the original payment method within 5-10 business days</li>
-            <li>Recurring monthly payments are non-refundable after the first 14 days</li>
+            <li>Recurring monthly payments are non-refundable after the first 30 days</li>
             <li>If you cancel mid-billing cycle, you retain access until the end of the paid period</li>
           </ul>
 

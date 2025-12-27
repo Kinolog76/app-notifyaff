@@ -22,7 +22,7 @@ const plans = [
     period: 'per month',
     description: 'For serious affiliate marketers',
     features: ['250 links', 'Daily checks', 'Email alerts', 'Full analytics', 'Priority support'],
-    cta: 'Start Free Trial',
+    cta: 'Get Started',
     popular: true,
   },
   {
@@ -38,7 +38,7 @@ const plans = [
       'API access',
       'Team features',
     ],
-    cta: 'Start Free Trial',
+    cta: 'Get Started',
     popular: false,
   },
 ];
@@ -134,7 +134,7 @@ export const PricingPreviewSection = () => {
 
         <div className='mt-8 text-center'>
           <p className='text-sm text-zinc-600 dark:text-zinc-400'>
-            All plans include a 14-day free trial. No credit card required.
+            Start with our free plan. Upgrade anytime as you grow.
           </p>
         </div>
       </div>
