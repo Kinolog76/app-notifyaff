@@ -28,12 +28,9 @@ export const ThemeProvider = ({
   storageKey = "linkguardian-theme",
   ...props
 }: ThemeProviderProps) => {
-  const [theme, setThemeState] = useState<Theme>(() => {
-    if (typeof window === "undefined") return defaultTheme;
-
-    const stored = localStorage.getItem(storageKey) as Theme;
-    return stored || defaultTheme;
-  });
+  const [theme, setTheme] = useState<Theme>(
+    () => (typeof window !== "undefined" && (localStorage.getItem(storageKey) as Theme)) || defaultTheme
+  );
 
   useEffect(() => {
     const root = window.document.documentElement;
@@ -47,16 +44,7 @@ export const ThemeProvider = ({
         : "light";
 
       root.classList.add(systemTheme);
-
-      const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-      const handleChange = () => {
-        root.classList.remove("light", "dark");
-        const newSystemTheme = mediaQuery.matches ? "dark" : "light";
-        root.classList.add(newSystemTheme);
-      };
-
-      mediaQuery.addEventListener("change", handleChange);
-      return () => mediaQuery.removeEventListener("change", handleChange);
+      return;
     }
 
     root.classList.add(theme);
@@ -64,9 +52,9 @@ export const ThemeProvider = ({
 
   const value = {
     theme,
-    setTheme: (newTheme: Theme) => {
-      localStorage.setItem(storageKey, newTheme);
-      setThemeState(newTheme);
+    setTheme: (theme: Theme) => {
+      localStorage.setItem(storageKey, theme);
+      setTheme(theme);
     },
   };
 
