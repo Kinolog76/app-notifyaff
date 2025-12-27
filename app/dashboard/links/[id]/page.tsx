@@ -258,8 +258,8 @@ export default function LinkDetailPage() {
               <ArrowLeft className='h-4 w-4' />
             </Button>
             <div className='flex-1'>
-              <div className='flex items-center gap-3 mb-2'>
-                <h1 className='text-3xl font-bold'>{link.name}</h1>
+              <div className='flex items-center gap-3 mb-2 flex-wrap'>
+                <h1 className='text-3xl font-bold overflow-wrap-anywhere'>{link.name}</h1>
                 <Badge variant={config.variant} className='gap-1.5'>
                   <div className={`h-2 w-2 rounded-full ${config.color}`} />
                   {config.label}
@@ -360,7 +360,7 @@ export default function LinkDetailPage() {
               </div>
               <div>
                 <h3 className='text-sm font-medium text-muted-foreground'>Last Checked</h3>
-                <p className='text-sm font-semibold'>
+                <p className='text-sm font-semibold' suppressHydrationWarning>
                   {link.last_checked_at ? formatDateShort(link.last_checked_at) : 'Never'}
                 </p>
               </div>
@@ -374,11 +374,11 @@ export default function LinkDetailPage() {
           <div className='grid gap-4 md:grid-cols-2'>
             <div>
               <p className='text-sm text-muted-foreground'>Created At</p>
-              <p className='font-medium'>{formatDate(link.created_at)}</p>
+              <p className='font-medium' suppressHydrationWarning>{formatDate(link.created_at)}</p>
             </div>
             <div>
               <p className='text-sm text-muted-foreground'>Last Updated</p>
-              <p className='font-medium'>{formatDate(link.updated_at)}</p>
+              <p className='font-medium' suppressHydrationWarning>{formatDate(link.updated_at)}</p>
             </div>
             {link.short_url && (
               <div>
@@ -424,7 +424,7 @@ export default function LinkDetailPage() {
                 <TableBody>
                   {checks.map((check) => (
                     <TableRow key={check.id}>
-                      <TableCell className='font-medium'>{formatDate(check.checked_at)}</TableCell>
+                      <TableCell className='font-medium' suppressHydrationWarning>{formatDate(check.checked_at)}</TableCell>
                       <TableCell>
                         <span className={getStatusCodeColor(check.status_code)}>
                           {check.status_code}

@@ -162,3 +162,7 @@ button,
 a {
   cursor: pointer !important;
 }
+
+.overflow-wrap-anywhere {
+  overflow-wrap: anywhere;
+}

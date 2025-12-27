@@ -19,8 +19,10 @@ import { Separator } from "@/components/ui/separator";
 import {
   Sheet,
   SheetContent,
+  SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { createClient } from "@/utils/supabase/client";
 
 const navItems = [
@@ -169,6 +171,9 @@ export const MobileSidebar = () => {
           </Button>
         </SheetTrigger>
         <SheetContent side="left" className="w-64 p-0">
+          <VisuallyHidden>
+            <SheetTitle>Navigation Menu</SheetTitle>
+          </VisuallyHidden>
           <SidebarContent onLinkClick={() => setOpen(false)} />
         </SheetContent>
       </Sheet>

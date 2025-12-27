@@ -301,7 +301,7 @@ export const LinksTable = ({ links, onEdit, onDelete, onRefresh, selectedLinks =
                   />
                 </TableCell>
                 <TableCell className="font-medium" onClick={() => router.push(`/dashboard/links/${link.id}`)}>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center text-wrap gap-2 overflow-wrap-anywhere">
                     {link.name}
                     {link.tracking_enabled === false && (
                       <Badge variant="outline" className="text-xs">
