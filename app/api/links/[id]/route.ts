@@ -8,7 +8,7 @@ const updateLinkSchema = z.object({
   category: z.string().optional(),
   tags: z.string().optional(),
   short_url: z.string().optional(),
-  status: z.enum(["active", "inactive", "broken", "warning"]).optional(),
+  status: z.enum(["active", "checking", "broken", "warning"]).optional(),
 });
 
 export async function GET(

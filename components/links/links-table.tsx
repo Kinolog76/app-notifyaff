@@ -41,7 +41,7 @@ interface Link {
   short_url?: string;
   category?: string;
   tags?: string;
-  status: 'active' | 'inactive' | 'broken' | 'warning';
+  status: 'active' | 'checking' | 'broken' | 'warning';
   created_at: string;
   updated_at: string;
   last_checked_at?: string;
@@ -61,7 +61,7 @@ const statusConfig = {
   active: { label: 'Active', variant: 'default' as const, color: 'bg-green-500' },
   warning: { label: 'Warning', variant: 'secondary' as const, color: 'bg-yellow-500' },
   broken: { label: 'Broken', variant: 'destructive' as const, color: 'bg-red-500' },
-  inactive: { label: 'Inactive', variant: 'outline' as const, color: 'bg-gray-500' },
+  checking: { label: 'Checking', variant: 'outline' as const, color: 'bg-blue-500' },
 };
 
 export const LinksTable = ({

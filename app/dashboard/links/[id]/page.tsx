@@ -43,7 +43,7 @@ interface Link {
   short_url?: string;
   category?: string;
   tags?: string;
-  status: 'active' | 'inactive' | 'broken' | 'warning';
+  status: 'active' | 'checking' | 'broken' | 'warning';
   created_at: string;
   updated_at: string;
   last_checked_at?: string;
@@ -64,7 +64,7 @@ const statusConfig = {
   active: { label: 'Active', variant: 'default' as const, color: 'bg-green-500' },
   warning: { label: 'Warning', variant: 'secondary' as const, color: 'bg-yellow-500' },
   broken: { label: 'Broken', variant: 'destructive' as const, color: 'bg-red-500' },
-  inactive: { label: 'Inactive', variant: 'outline' as const, color: 'bg-gray-500' },
+  checking: { label: 'Checking', variant: 'outline' as const, color: 'bg-gray-500' },
 };
 
 export default function LinkDetailPage() {
@@ -264,9 +264,7 @@ export default function LinkDetailPage() {
                   <div className={`h-2 w-2 rounded-full ${config.color}`} />
                   {config.label}
                 </Badge>
-                {link.tracking_enabled === false && (
-                  <Badge variant='outline'>Tracking Off</Badge>
-                )}
+                {link.tracking_enabled === false && <Badge variant='outline'>Tracking Off</Badge>}
               </div>
               <a
                 href={link.url}
@@ -288,10 +286,7 @@ export default function LinkDetailPage() {
               <RefreshCw className='h-4 w-4' />
               Check Now
             </Button>
-            <Button
-              variant='outline'
-              onClick={handleToggleTracking}
-              disabled={isTogglingTracking}>
+            <Button variant='outline' onClick={handleToggleTracking} disabled={isTogglingTracking}>
               {link.tracking_enabled ? (
                 <>
                   <PowerOff className='h-4 w-4' />
@@ -374,11 +369,15 @@ export default function LinkDetailPage() {
           <div className='grid gap-4 md:grid-cols-2'>
             <div>
               <p className='text-sm text-muted-foreground'>Created At</p>
-              <p className='font-medium' suppressHydrationWarning>{formatDate(link.created_at)}</p>
+              <p className='font-medium' suppressHydrationWarning>
+                {formatDate(link.created_at)}
+              </p>
             </div>
             <div>
               <p className='text-sm text-muted-foreground'>Last Updated</p>
-              <p className='font-medium' suppressHydrationWarning>{formatDate(link.updated_at)}</p>
+              <p className='font-medium' suppressHydrationWarning>
+                {formatDate(link.updated_at)}
+              </p>
             </div>
             {link.short_url && (
               <div>
@@ -424,7 +423,9 @@ export default function LinkDetailPage() {
                 <TableBody>
                   {checks.map((check) => (
                     <TableRow key={check.id}>
-                      <TableCell className='font-medium' suppressHydrationWarning>{formatDate(check.checked_at)}</TableCell>
+                      <TableCell className='font-medium' suppressHydrationWarning>
+                        {formatDate(check.checked_at)}
+                      </TableCell>
                       <TableCell>
                         <span className={getStatusCodeColor(check.status_code)}>
                           {check.status_code}
