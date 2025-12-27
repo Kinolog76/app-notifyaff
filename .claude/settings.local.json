@@ -4,7 +4,8 @@
       "Bash(npm install:*)",
       "Bash(npx shadcn@latest init:*)",
       "Bash(dir:*)",
-      "Bash(npm uninstall:*)"
+      "Bash(npm uninstall:*)",
+      "Bash(npx shadcn@latest add:*)"
     ]
   }
 }
