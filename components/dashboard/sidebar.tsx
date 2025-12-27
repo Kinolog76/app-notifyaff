@@ -145,7 +145,7 @@ const SidebarContent = ({ onLinkClick }: { onLinkClick?: () => void }) => {
 
 export const DashboardSidebar = () => {
   return (
-    <aside className="hidden h-screen w-64 flex-col border-r bg-card lg:flex">
+    <aside className="absolute hidden h-screen w-64 flex-col border-r bg-card lg:flex">
       <SidebarContent />
     </aside>
   );

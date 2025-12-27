@@ -10,7 +10,7 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   return (
     <div className="flex min-h-screen bg-background">
       <DashboardSidebar />
-      <div className="flex flex-1 flex-col">
+      <div className="flex flex-1 flex-col max-w-[-webkit-fill-available] lg:pl-64">
         <MobileSidebar />
         <DashboardHeader />
         <main className="flex-1 p-6">{children}</main>
