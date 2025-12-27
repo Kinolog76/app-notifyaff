@@ -15,13 +15,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 const linkFormSchema = z.object({
   url: z
@@ -41,15 +34,6 @@ const linkFormSchema = z.object({
 });
 
 type LinkFormValues = z.infer<typeof linkFormSchema>;
-
-const categories = [
-  "Amazon",
-  "Social Media",
-  "E-commerce",
-  "SaaS",
-  "Digital Products",
-  "Other",
-];
 
 interface Link {
   id: string;
@@ -159,20 +143,12 @@ export const AddLinkForm = ({ link, onSuccess, onCancel }: AddLinkFormProps) => 
           render={({ field }) => (
             <FormItem>
               <FormLabel>Category</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a category" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {categories.map((category) => (
-                    <SelectItem key={category} value={category.toLowerCase()}>
-                      {category}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <FormControl>
+                <Input
+                  placeholder="e.g., Amazon, Social Media, E-commerce"
+                  {...field}
+                />
+              </FormControl>
               <FormDescription>
                 Organize your links by category (optional)
               </FormDescription>
