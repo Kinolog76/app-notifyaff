@@ -5,7 +5,7 @@ import { createClient } from "@/utils/supabase/client";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Plus, Upload } from "lucide-react";
+import { Plus, Upload, Power, PowerOff } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -28,6 +28,7 @@ interface Link {
   created_at: string;
   updated_at: string;
   last_checked_at?: string;
+  tracking_enabled?: boolean;
 }
 
 export default function LinksPage() {
@@ -36,6 +37,8 @@ export default function LinksPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
   const [editingLink, setEditingLink] = useState<Link | null>(null);
+  const [selectedLinks, setSelectedLinks] = useState<string[]>([]);
+  const [isTogglingBulk, setIsTogglingBulk] = useState(false);
   const supabase = createClient();
 
   useEffect(() => {
@@ -93,6 +96,31 @@ export default function LinksPage() {
     setEditingLink(null);
   };
 
+  const handleBulkToggleTracking = async (enable: boolean) => {
+    if (selectedLinks.length === 0) return;
+
+    const action = enable ? "enable" : "disable";
+    if (!confirm(`Are you sure you want to ${action} tracking for ${selectedLinks.length} selected link(s)?`)) return;
+
+    setIsTogglingBulk(true);
+    try {
+      const { error } = await supabase
+        .from("links")
+        .update({ tracking_enabled: enable })
+        .in("id", selectedLinks);
+
+      if (error) {
+        console.error("Error toggling bulk tracking:", error);
+        alert("Failed to update tracking status");
+      } else {
+        setSelectedLinks([]);
+        await fetchLinks();
+      }
+    } finally {
+      setIsTogglingBulk(false);
+    }
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -104,6 +132,26 @@ export default function LinksPage() {
             </p>
           </div>
           <div className="flex gap-2">
+            {selectedLinks.length > 0 && (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => handleBulkToggleTracking(false)}
+                  disabled={isTogglingBulk}
+                >
+                  <PowerOff className="h-4 w-4" />
+                  Disable Tracking ({selectedLinks.length})
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => handleBulkToggleTracking(true)}
+                  disabled={isTogglingBulk}
+                >
+                  <Power className="h-4 w-4" />
+                  Enable Tracking ({selectedLinks.length})
+                </Button>
+              </>
+            )}
             <Button
               variant="outline"
               onClick={() => setIsBulkImportOpen(true)}
@@ -144,7 +192,14 @@ export default function LinksPage() {
               <p className="text-muted-foreground">Loading links...</p>
             </div>
           ) : (
-            <LinksTable links={links} onEdit={handleEdit} onDelete={handleDelete} />
+            <LinksTable
+              links={links}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              onRefresh={fetchLinks}
+              selectedLinks={selectedLinks}
+              onSelectionChange={setSelectedLinks}
+            />
           )}
         </Card>
       </div>

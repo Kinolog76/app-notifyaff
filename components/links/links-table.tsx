@@ -2,7 +2,8 @@
 
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { MoreHorizontal, ExternalLink, Pencil, Trash2, Eye, BarChart3 } from "lucide-react";
+import { MoreHorizontal, ExternalLink, Pencil, Trash2, Eye, BarChart3, Power, PowerOff } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
   TableBody,
@@ -17,10 +18,12 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { LinksFilters } from "./links-filters";
 import { LinkStatsDialog } from "./link-stats-dialog";
+import { createClient } from "@/utils/supabase/client";
 
 interface Link {
   id: string;
@@ -33,12 +36,16 @@ interface Link {
   created_at: string;
   updated_at: string;
   last_checked_at?: string;
+  tracking_enabled?: boolean;
 }
 
 interface LinksTableProps {
   links: Link[];
   onEdit?: (link: Link) => void;
   onDelete?: (id: string) => void;
+  onRefresh?: () => void;
+  selectedLinks?: string[];
+  onSelectionChange?: (selectedIds: string[]) => void;
 }
 
 const statusConfig = {
@@ -48,9 +55,11 @@ const statusConfig = {
   inactive: { label: "Inactive", variant: "outline" as const, color: "bg-gray-500" },
 };
 
-export const LinksTable = ({ links, onEdit, onDelete }: LinksTableProps) => {
+export const LinksTable = ({ links, onEdit, onDelete, onRefresh, selectedLinks = [], onSelectionChange }: LinksTableProps) => {
   const router = useRouter();
+  const supabase = createClient();
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -122,6 +131,30 @@ export const LinksTable = ({ links, onEdit, onDelete }: LinksTableProps) => {
     }
   };
 
+  const handleToggleTracking = async (link: Link) => {
+    const newTrackingState = !link.tracking_enabled;
+    const action = newTrackingState ? "enable" : "disable";
+
+    if (!confirm(`Are you sure you want to ${action} tracking for this link?`)) return;
+
+    setTogglingId(link.id);
+    try {
+      const { error } = await supabase
+        .from("links")
+        .update({ tracking_enabled: newTrackingState })
+        .eq("id", link.id);
+
+      if (error) {
+        console.error("Error toggling tracking:", error);
+        alert("Failed to update tracking status");
+      } else {
+        onRefresh?.();
+      }
+    } finally {
+      setTogglingId(null);
+    }
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
       month: "short",
@@ -138,6 +171,25 @@ export const LinksTable = ({ links, onEdit, onDelete }: LinksTableProps) => {
     setStatsLink(link);
     setIsStatsDialogOpen(true);
   };
+
+  const handleSelectAll = (checked: boolean | "indeterminate") => {
+    if (checked === true) {
+      onSelectionChange?.(filteredLinks.map(link => link.id));
+    } else {
+      onSelectionChange?.([]);
+    }
+  };
+
+  const handleSelectLink = (linkId: string, checked: boolean | "indeterminate") => {
+    if (checked === true) {
+      onSelectionChange?.([...selectedLinks, linkId]);
+    } else {
+      onSelectionChange?.(selectedLinks.filter(id => id !== linkId));
+    }
+  };
+
+  const isAllSelected = filteredLinks.length > 0 && selectedLinks.length === filteredLinks.length;
+  const isSomeSelected = selectedLinks.length > 0 && selectedLinks.length < filteredLinks.length;
 
   const TagsDisplay = ({ tagsString }: { tagsString?: string }) => {
     const [showAll, setShowAll] = useState(false);
@@ -215,6 +267,14 @@ export const LinksTable = ({ links, onEdit, onDelete }: LinksTableProps) => {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-12">
+                  <Checkbox
+                    checked={isAllSelected}
+                    onCheckedChange={handleSelectAll}
+                    aria-label="Select all links"
+                    className={isSomeSelected ? "data-[state=checked]:bg-primary/50" : ""}
+                  />
+                </TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>URL</TableHead>
@@ -231,19 +291,32 @@ export const LinksTable = ({ links, onEdit, onDelete }: LinksTableProps) => {
             return (
               <TableRow
                 key={link.id}
-                className="cursor-pointer hover:bg-muted/50"
-                onClick={() => router.push(`/dashboard/links/${link.id}`)}
+                className={`cursor-pointer hover:bg-muted/50 ${link.tracking_enabled === false ? "opacity-50" : ""}`}
               >
-                <TableCell className="font-medium">
-                  {link.name}
+                <TableCell onClick={(e) => e.stopPropagation()}>
+                  <Checkbox
+                    checked={selectedLinks.includes(link.id)}
+                    onCheckedChange={(checked) => handleSelectLink(link.id, checked as boolean)}
+                    aria-label={`Select ${link.name}`}
+                  />
                 </TableCell>
-                <TableCell>
+                <TableCell className="font-medium" onClick={() => router.push(`/dashboard/links/${link.id}`)}>
+                  <div className="flex items-center gap-2">
+                    {link.name}
+                    {link.tracking_enabled === false && (
+                      <Badge variant="outline" className="text-xs">
+                        Tracking Off
+                      </Badge>
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell onClick={() => router.push(`/dashboard/links/${link.id}`)}>
                   <Badge variant={config.variant} className="gap-1.5">
                     <div className={`h-2 w-2 rounded-full ${config.color}`} />
                     {config.label}
                   </Badge>
                 </TableCell>
-                <TableCell className="max-w-md">
+                <TableCell className="max-w-md" onClick={() => router.push(`/dashboard/links/${link.id}`)}>
                   <div className="flex flex-col gap-1">
                     <a
                       href={link.url}
@@ -262,22 +335,22 @@ export const LinksTable = ({ links, onEdit, onDelete }: LinksTableProps) => {
                     )}
                   </div>
                 </TableCell>
-                <TableCell>
+                <TableCell onClick={() => router.push(`/dashboard/links/${link.id}`)}>
                   {link.category ? (
                     <Badge variant="outline">{link.category}</Badge>
                   ) : (
                     <span className="text-muted-foreground text-sm">-</span>
                   )}
                 </TableCell>
-                <TableCell>
+                <TableCell onClick={() => router.push(`/dashboard/links/${link.id}`)}>
                   <TagsDisplay tagsString={link.tags} />
                 </TableCell>
-                <TableCell className="text-sm text-muted-foreground">
+                <TableCell className="text-sm text-muted-foreground" onClick={() => router.push(`/dashboard/links/${link.id}`)}>
                   {link.last_checked_at
                     ? formatDate(link.last_checked_at)
                     : "Never"}
                 </TableCell>
-                <TableCell className="text-sm text-muted-foreground">
+                <TableCell className="text-sm text-muted-foreground" onClick={() => router.push(`/dashboard/links/${link.id}`)}>
                   {formatDate(link.created_at)}
                 </TableCell>
                 <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
@@ -317,6 +390,25 @@ export const LinksTable = ({ links, onEdit, onDelete }: LinksTableProps) => {
                         <ExternalLink className="mr-2 h-4 w-4" />
                         Open Link
                       </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={() => handleToggleTracking(link)}
+                        disabled={togglingId === link.id}
+                        className="cursor-pointer"
+                      >
+                        {link.tracking_enabled ? (
+                          <>
+                            <PowerOff className="mr-2 h-4 w-4" />
+                            {togglingId === link.id ? "Disabling..." : "Disable Tracking"}
+                          </>
+                        ) : (
+                          <>
+                            <Power className="mr-2 h-4 w-4" />
+                            {togglingId === link.id ? "Enabling..." : "Enable Tracking"}
+                          </>
+                        )}
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
                       <DropdownMenuItem
                         onClick={() => handleDelete(link.id)}
                         disabled={deletingId === link.id}
