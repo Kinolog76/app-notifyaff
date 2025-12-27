@@ -15,7 +15,7 @@ export const HeroSection = () => {
             transition={{ duration: 0.6 }}
             className="max-w-4xl text-4xl font-bold leading-tight tracking-tight text-zinc-900 dark:text-zinc-50 md:text-5xl lg:text-6xl"
           >
-            Monitor affiliate links and get instant alerts
+            Affiliate Link Monitoring Tool That Protects Your Revenue 24/7
           </motion.h1>
 
           <motion.p
@@ -24,7 +24,7 @@ export const HeroSection = () => {
             transition={{ duration: 0.6, delay: 0.1 }}
             className="mt-6 max-w-2xl text-balance text-lg leading-8 text-zinc-600 dark:text-zinc-400 md:text-xl"
           >
-            Never lose commissions because of broken or redirected affiliate links
+            Automatically detect broken affiliate links, track redirects, and get instant alerts before you lose commissions. Trusted by 10,000+ affiliate marketers.
           </motion.p>
 
           <motion.div

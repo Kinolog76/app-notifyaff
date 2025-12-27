@@ -62,10 +62,10 @@ export const FeaturesSection = () => {
       <div className="container mx-auto px-4">
         <div className="text-center">
           <h2 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 md:text-4xl">
-            Powerful Features
+            Complete Affiliate Link Management Platform
           </h2>
           <p className="mt-4 text-lg text-zinc-600 dark:text-zinc-400">
-            Everything you need to keep your affiliate links healthy
+            All the tools you need to monitor, track, and protect your affiliate revenue in one dashboard
           </p>
         </div>
 

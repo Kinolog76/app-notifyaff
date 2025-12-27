@@ -47,10 +47,10 @@ export const SolutionSection = () => {
       <div className="container mx-auto px-4">
         <div className="text-center">
           <h2 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 md:text-4xl">
-            NotifyAff monitors your links 24/7
+            Automated Affiliate Link Checker That Never Sleeps
           </h2>
           <p className="mt-4 text-lg text-zinc-600 dark:text-zinc-400">
-            Automated protection for your affiliate revenue
+            NotifyAff monitors every affiliate link 24/7, detects issues in real-time, and alerts you instantly—so you can fix problems before losing a single commission
           </p>
         </div>
 

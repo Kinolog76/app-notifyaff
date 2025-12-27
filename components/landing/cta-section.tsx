@@ -17,11 +17,11 @@ export const CTASection = () => {
           className="mx-auto max-w-3xl text-center"
         >
           <h2 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 md:text-4xl lg:text-5xl">
-            Stop losing affiliate revenue
+            Start Protecting Your Affiliate Revenue Today
           </h2>
           <p className="mt-6 text-lg text-zinc-600 dark:text-zinc-400 md:text-xl">
-            Join thousands of marketers who trust NotifyAff to protect their
-            affiliate income. Start monitoring your links today.
+            Join 10,000+ affiliate marketers who use NotifyAff to monitor their links 24/7.
+            Get instant alerts when links break and never lose commissions again.
           </p>
 
           <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:justify-center">

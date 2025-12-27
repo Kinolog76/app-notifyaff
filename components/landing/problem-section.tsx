@@ -46,8 +46,11 @@ export const ProblemSection = () => {
       <div className="container mx-auto px-4">
         <div className="text-center">
           <h2 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 md:text-4xl">
-            Affiliate links break more often than you think
+            Are Broken Affiliate Links Costing You Thousands in Lost Revenue?
           </h2>
+          <p className="mt-4 text-lg text-zinc-600 dark:text-zinc-400">
+            Most affiliate marketers discover broken links weeks too late—after losing significant commissions
+          </p>
         </div>
 
         <motion.div

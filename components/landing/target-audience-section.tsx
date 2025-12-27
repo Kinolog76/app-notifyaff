@@ -51,10 +51,10 @@ export const TargetAudienceSection = () => {
       <div className="container mx-auto px-4">
         <div className="text-center">
           <h2 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 md:text-4xl">
-            Built for professionals who value their revenue
+            Trusted by Affiliate Marketers, Bloggers & Content Creators Worldwide
           </h2>
           <p className="mt-4 text-lg text-zinc-600 dark:text-zinc-400">
-            Trusted by marketers, creators, and businesses worldwide
+            From solo creators to marketing teams—protect your affiliate income at any scale
           </p>
         </div>
 
