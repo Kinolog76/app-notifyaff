@@ -61,6 +61,7 @@ export async function POST(request: Request) {
       .select();
 
     if (error) {
+      console.error("Database error:", error);
       return NextResponse.json(
         { error: "Failed to import links", details: error.message },
         { status: 500 }

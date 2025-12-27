@@ -62,7 +62,8 @@ export const BulkImportDialog = ({
 
         if (!response.ok) {
           const error = await response.json();
-          throw new Error(error.error || "Failed to import links");
+          console.error("API error response:", error);
+          throw new Error(error.details || error.error || "Failed to import links");
         }
 
         setImportComplete(true);
