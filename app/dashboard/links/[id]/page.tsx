@@ -27,6 +27,14 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { AddLinkForm } from '@/components/links/add-link-form';
 
 interface Link {
   id: string;
@@ -65,6 +73,7 @@ export default function LinkDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isTogglingTracking, setIsTogglingTracking] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const router = useRouter();
   const params = useParams();
   const supabase = createClient();
@@ -161,6 +170,16 @@ export default function LinkDetailPage() {
     } finally {
       setIsTogglingTracking(false);
     }
+  };
+
+  const handleEditSuccess = async () => {
+    setIsEditDialogOpen(false);
+    await fetchLinkDetails();
+    await fetchLinkChecks();
+  };
+
+  const handleEditCancel = () => {
+    setIsEditDialogOpen(false);
   };
 
   const formatDate = (dateString: string) => {
@@ -285,7 +304,7 @@ export default function LinkDetailPage() {
                 </>
               )}
             </Button>
-            <Button variant='outline'>
+            <Button variant='outline' onClick={() => setIsEditDialogOpen(true)}>
               <Pencil className='h-4 w-4' />
               Edit
             </Button>
@@ -427,6 +446,16 @@ export default function LinkDetailPage() {
           )}
         </Card>
       </div>
+
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className='sm:max-w-[550px]'>
+          <DialogHeader>
+            <DialogTitle>Edit Affiliate Link</DialogTitle>
+            <DialogDescription>Update your affiliate link details.</DialogDescription>
+          </DialogHeader>
+          <AddLinkForm link={link} onSuccess={handleEditSuccess} onCancel={handleEditCancel} />
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }
