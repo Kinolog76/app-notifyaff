@@ -108,18 +108,35 @@ export default function LinkDetailPage() {
 
   const fetchLinkDetails = async () => {
     setIsLoading(true);
-    const { data, error } = await supabase
+
+    // Fetch link data
+    const { data: linkData, error: linkError } = await supabase
       .from('links')
-      .select('*, workspaces(*)')
+      .select('*')
       .eq('id', linkId)
       .single();
 
-    if (error) {
-      console.error('Error fetching link:', error);
+    if (linkError) {
+      console.error('Error fetching link:', linkError);
       router.push('/dashboard');
-    } else {
-      setLink(data);
+      setIsLoading(false);
+      return;
     }
+
+    // Fetch workspace data if link has a workspace_id
+    if (linkData.workspace_id) {
+      const { data: workspaceData, error: workspaceError } = await supabase
+        .from('workspaces')
+        .select('id, name, description, icon, color')
+        .eq('id', linkData.workspace_id)
+        .single();
+
+      if (!workspaceError && workspaceData) {
+        linkData.workspaces = workspaceData;
+      }
+    }
+
+    setLink(linkData);
     setIsLoading(false);
   };
 

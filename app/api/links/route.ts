@@ -90,6 +90,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const category = searchParams.get("category");
     const status = searchParams.get("status");
+    const workspaceId = searchParams.get("workspace_id");
 
     let query = supabase
       .from("links")
@@ -103,6 +104,15 @@ export async function GET(request: Request) {
 
     if (status) {
       query = query.eq("status", status);
+    }
+
+    // Optional workspace filter - if not provided, returns all links
+    if (workspaceId) {
+      if (workspaceId === "null" || workspaceId === "none") {
+        query = query.is("workspace_id", null);
+      } else {
+        query = query.eq("workspace_id", workspaceId);
+      }
     }
 
     const { data, error } = await query;

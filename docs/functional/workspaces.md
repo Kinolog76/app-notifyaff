@@ -22,15 +22,16 @@ WHERE is_default = TRUE;
 ```
 
 ```sql
--- Add workspace_id column to existing links table (NULLABLE)
-ALTER TABLE links 
+-- Add workspace_id column to existing links table (NULLABLE - workspaces are optional)
+ALTER TABLE links
 ADD COLUMN workspace_id UUID REFERENCES workspaces(id) ON DELETE SET NULL;
 
 -- Index for faster queries (includes NULL values)
 CREATE INDEX idx_links_workspace_id ON links(workspace_id);
 
--- Links without workspace will show in "Uncategorized" section
--- No automatic migration to default workspace
+-- Links can exist without a workspace - they remain independent
+-- When a workspace is deleted, links are preserved with workspace_id set to NULL
+-- All links are always visible on the main Links page
 ```
 
 ```sql
@@ -94,11 +95,11 @@ export async function POST(req: Request) {
 export async function GET(req: Request) {
   const supabase = createRouteHandlerClient({ cookies })
   const { data: { session } } = await supabase.auth.getSession()
-  
+
   if (!session) {
     return new Response('Unauthorized', { status: 401 })
   }
-  
+
   // Get workspaces with link counts
   const { data: workspaces, error } = await supabase
     .from('workspaces')
@@ -107,37 +108,31 @@ export async function GET(req: Request) {
       links:links(count)
     `)
     .order('created_at', { ascending: false })
-  
+
   if (error) {
     return Response.json({ error: error.message }, { status: 400 })
   }
-  
-  // Get count of uncategorized links
-  const { count: uncategorizedCount } = await supabase
-    .from('links')
-    .select('*', { count: 'exact', head: true })
-    .is('workspace_id', null)
-    .eq('user_id', session.user.id)
-  
+
   // Fetch stats for each workspace
   const workspacesWithStats = await Promise.all(
     workspaces.map(async (workspace) => {
       const { data: stats } = await supabase
         .rpc('get_workspace_stats', { workspace_uuid: workspace.id })
         .single()
-      
+
       return {
         ...workspace,
         stats,
       }
     })
   )
-  
+
   return Response.json({
-    workspaces: workspacesWithStats,
-    uncategorized_count: uncategorizedCount || 0,
+    workspaces: workspacesWithStats
   })
 }
+
+// Note: All links (including those without a workspace) are always accessible via /api/links
 ```
 
 ```js
@@ -171,21 +166,22 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   const supabase = createRouteHandlerClient({ cookies })
-  
+
   // Delete workspace
   // Links will have workspace_id set to NULL automatically (ON DELETE SET NULL)
+  // Links are preserved and remain accessible on the Links page
   const { error } = await supabase
     .from('workspaces')
     .delete()
     .eq('id', params.id)
-  
+
   if (error) {
     return Response.json({ error: error.message }, { status: 400 })
   }
-  
-  return Response.json({ 
+
+  return Response.json({
     success: true,
-    message: 'Workspace deleted. Links moved to uncategorized.'
+    message: 'Workspace deleted successfully. Links have been preserved and can be viewed on the Links page.'
   })
 }
 ```
@@ -216,21 +212,34 @@ export async function PATCH(
 ```
 
 ```js
-// app/api/links/uncategorized/route.ts
+// app/api/links/route.ts - GET endpoint
 export async function GET(req: Request) {
   const supabase = createRouteHandlerClient({ cookies })
-  
-  const { data, error } = await supabase
+  const { searchParams } = new URL(req.url)
+  const workspaceId = searchParams.get('workspace_id')
+
+  let query = supabase
     .from('links')
     .select('*')
-    .is('workspace_id', null)
     .order('created_at', { ascending: false })
-  
+
+  // Optional workspace filter
+  if (workspaceId) {
+    if (workspaceId === 'null' || workspaceId === 'none') {
+      query = query.is('workspace_id', null)
+    } else {
+      query = query.eq('workspace_id', workspaceId)
+    }
+  }
+  // If no workspace_id param, returns ALL links
+
+  const { data, error } = await query
+
   if (error) {
     return Response.json({ error: error.message }, { status: 400 })
   }
-  
-  return Response.json(data)
+
+  return Response.json({ data })
 }
 ```
 
@@ -251,32 +260,38 @@ interface Workspace {
 export function WorkspaceSelector({
   value,
   onChange,
+  showAllOption = false,
+  showNoneOption = true,
 }: {
   value?: string
   onChange: (workspaceId: string) => void
+  showAllOption?: boolean
+  showNoneOption?: boolean
 }) {
   const supabase = createClientComponentClient()
   const [workspaces, setWorkspaces] = useState<Workspace[]>([])
-  
+
   useEffect(() => {
     fetchWorkspaces()
   }, [])
-  
+
   async function fetchWorkspaces() {
     const { data } = await supabase
       .from('workspaces')
       .select('id, name, icon, color')
       .order('created_at')
-    
+
     if (data) setWorkspaces(data)
   }
-  
+
   return (
     <select
-      value={value}
+      value={value || 'none'}
       onChange={(e) => onChange(e.target.value)}
       className="w-full p-2 border rounded"
     >
+      {showNoneOption && <option value="none">No workspace</option>}
+      {showAllOption && <option value="all">All Workspaces</option>}
       {workspaces.map((workspace) => (
         <option key={workspace.id} value={workspace.id}>
           {workspace.icon} {workspace.name}
@@ -290,7 +305,7 @@ export function WorkspaceSelector({
 
 
 ```sql
--- Migration: Add workspaces feature (optional workspaces)
+-- Migration: Add workspaces feature (workspaces are optional)
 BEGIN;
 
 -- 1. Create workspaces table
@@ -306,19 +321,15 @@ CREATE TABLE IF NOT EXISTS workspaces (
   updated_at TIMESTAMP DEFAULT NOW()
 );
 
--- 2. Add workspace_id to links (NULLABLE - optional)
-ALTER TABLE links 
+-- 2. Add workspace_id to links (NULLABLE - workspaces are completely optional)
+ALTER TABLE links
 ADD COLUMN IF NOT EXISTS workspace_id UUID REFERENCES workspaces(id) ON DELETE SET NULL;
 
--- 3. NO auto-creation of default workspace
--- Users start with uncategorized links and create workspaces as needed
-
--- 4. Add indexes
+-- 3. Add indexes
 CREATE INDEX IF NOT EXISTS idx_workspaces_user_id ON workspaces(user_id);
 CREATE INDEX IF NOT EXISTS idx_links_workspace_id ON links(workspace_id);
-CREATE INDEX IF NOT EXISTS idx_links_no_workspace ON links(user_id) WHERE workspace_id IS NULL;
 
--- 5. Add RLS policies
+-- 4. Add RLS policies
 ALTER TABLE workspaces ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Users can view own workspaces" ON workspaces;
@@ -341,7 +352,7 @@ CREATE POLICY "Users can delete own workspaces"
   ON workspaces FOR DELETE
   USING (auth.uid() = user_id);
 
--- 6. Create helper function
+-- 5. Create helper function for workspace statistics
 CREATE OR REPLACE FUNCTION get_workspace_stats(workspace_uuid UUID)
 RETURNS TABLE(
   total_links BIGINT,
@@ -363,27 +374,11 @@ BEGIN
 END;
 $ LANGUAGE plpgsql;
 
--- 7. Function to get uncategorized stats
-CREATE OR REPLACE FUNCTION get_uncategorized_stats(user_uuid UUID)
-RETURNS TABLE(
-  total_links BIGINT,
-  active_links BIGINT,
-  broken_links BIGINT,
-  warning_links BIGINT,
-  last_check TIMESTAMP
-) AS $
-BEGIN
-  RETURN QUERY
-  SELECT
-    COUNT(*)::BIGINT,
-    COUNT(*) FILTER (WHERE status = 'active')::BIGINT,
-    COUNT(*) FILTER (WHERE status = 'broken')::BIGINT,
-    COUNT(*) FILTER (WHERE status = 'warning')::BIGINT,
-    MAX(last_checked_at)
-  FROM links
-  WHERE user_id = user_uuid AND workspace_id IS NULL;
-END;
-$ LANGUAGE plpgsql;
-
 COMMIT;
+
+-- Key Points:
+-- * Links don't require a workspace - workspace_id can be NULL
+-- * When a workspace is deleted, links are preserved (ON DELETE SET NULL)
+-- * All links are always visible on the main Links page
+-- * Workspaces are purely organizational - deleting them doesn't delete links
 ```

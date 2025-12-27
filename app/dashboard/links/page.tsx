@@ -68,16 +68,57 @@ export default function LinksPage() {
   const fetchLinks = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (!user) {
+        console.error('User not authenticated');
+        setIsLoading(false);
+        return;
+      }
+
+      // Fetch links first
+      const { data: linksData, error: linksError } = await supabase
         .from('links')
-        .select('*, workspaces(id, name, icon, color)')
+        .select('*')
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Error fetching links:', error);
-      } else {
-        setLinks(data || []);
+      if (linksError) {
+        console.error('Error fetching links:', linksError);
+        setIsLoading(false);
+        return;
       }
+
+      // Get unique workspace IDs
+      const workspaceIds = [...new Set(
+        linksData
+          ?.map(link => link.workspace_id)
+          .filter(id => id != null) || []
+      )];
+
+      // Fetch workspaces if there are any
+      let workspacesMap: Record<string, Workspace> = {};
+      if (workspaceIds.length > 0) {
+        const { data: workspacesData, error: workspacesError } = await supabase
+          .from('workspaces')
+          .select('id, name, icon, color')
+          .in('id', workspaceIds);
+
+        if (!workspacesError && workspacesData) {
+          workspacesMap = workspacesData.reduce((acc, workspace) => {
+            acc[workspace.id] = workspace;
+            return acc;
+          }, {} as Record<string, Workspace>);
+        }
+      }
+
+      // Combine links with their workspaces
+      const linksWithWorkspaces = linksData?.map(link => ({
+        ...link,
+        workspaces: link.workspace_id ? workspacesMap[link.workspace_id] : undefined
+      })) || [];
+
+      setLinks(linksWithWorkspaces);
     } catch (error) {
       console.error('Error fetching links:', error);
     } finally {
