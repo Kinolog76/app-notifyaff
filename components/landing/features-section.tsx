@@ -58,7 +58,7 @@ const cardVariants = {
 
 export const FeaturesSection = () => {
   return (
-    <section className="bg-zinc-50 py-20 dark:bg-zinc-900 md:py-24">
+    <section id="features" className="bg-zinc-50 py-20 dark:bg-zinc-900 md:py-24">
       <div className="container mx-auto px-4">
         <div className="text-center">
           <h2 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 md:text-4xl">
