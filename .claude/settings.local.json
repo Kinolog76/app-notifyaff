@@ -9,7 +9,8 @@
       "Bash(npm run build:*)",
       "Bash(npx supabase:*)",
       "Bash(npm run dev:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(findstr:*)"
     ]
   }
 }

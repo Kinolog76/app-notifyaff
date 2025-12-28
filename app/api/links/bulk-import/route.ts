@@ -45,6 +45,30 @@ export async function POST(request: Request) {
       );
     }
 
+    // Check user's plan limits before proceeding
+    const { data: settings } = await supabase
+      .from('user_settings')
+      .select('links_count, links_limit, plan')
+      .eq('user_id', user.id)
+      .single()
+
+    if (settings) {
+      const newTotal = settings.links_count + links.length
+      if (newTotal > settings.links_limit) {
+        return NextResponse.json(
+          {
+            error: 'Link limit exceeded',
+            message: `Your ${settings.plan} plan allows ${settings.links_limit} links. You currently have ${settings.links_count} and are trying to add ${links.length} more.`,
+            current: settings.links_count,
+            limit: settings.links_limit,
+            requestedAmount: links.length,
+            needsUpgrade: true,
+          },
+          { status: 403 }
+        )
+      }
+    }
+
     // Prepare links for insertion
     const linksToInsert = links.map((link) => ({
       user_id: user.id,
@@ -64,6 +88,17 @@ export async function POST(request: Request) {
 
     if (error) {
       console.error("Database error:", error);
+      // Database trigger might also throw limit error
+      if (error.message.includes('Link limit exceeded')) {
+        return NextResponse.json(
+          {
+            error: 'Link limit exceeded',
+            message: error.message,
+            needsUpgrade: true,
+          },
+          { status: 403 }
+        )
+      }
       return NextResponse.json(
         { error: "Failed to import links", details: error.message },
         { status: 500 }

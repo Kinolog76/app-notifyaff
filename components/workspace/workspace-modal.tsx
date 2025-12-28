@@ -24,6 +24,8 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
+import { usePlanLimits } from '@/lib/hooks/use-plan-limits';
+import { UpgradeModal } from '@/components/upgrade-modal';
 
 const workspaceFormSchema = z.object({
   name: z.string().min(1, 'Name is required').max(50, 'Name must be less than 50 characters'),
@@ -65,6 +67,8 @@ const COLOR_OPTIONS = [
 
 export function WorkspaceModal({ isOpen, onClose, workspace, onSuccess }: WorkspaceModalProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const { canAddWorkspace, settings } = usePlanLimits();
   const isEditing = !!workspace;
 
   const form = useForm<WorkspaceFormValues>({
@@ -99,6 +103,11 @@ export function WorkspaceModal({ isOpen, onClose, workspace, onSuccess }: Worksp
   }, [workspace, form]);
 
   const onSubmit = async (data: WorkspaceFormValues) => {
+    if (!isEditing && !canAddWorkspace) {
+      setShowUpgradeModal(true);
+      return;
+    }
+
     setIsLoading(true);
     try {
       const url = isEditing ? `/api/workspaces/${workspace.id}` : '/api/workspaces';
@@ -112,9 +121,16 @@ export function WorkspaceModal({ isOpen, onClose, workspace, onSuccess }: Worksp
         body: JSON.stringify(data),
       });
 
+      const result = await response.json();
+
+      if (response.status === 403 && result.needsUpgrade) {
+        setShowUpgradeModal(true);
+        alert(result.message);
+        return;
+      }
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to save workspace');
+        throw new Error(result.error || 'Failed to save workspace');
       }
 
       form.reset();
@@ -244,13 +260,21 @@ export function WorkspaceModal({ isOpen, onClose, workspace, onSuccess }: Worksp
               <Button type="button" variant="outline" onClick={handleClose} disabled={isLoading}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={isLoading}>
+              <Button type="submit" disabled={isLoading || (!isEditing && !canAddWorkspace)}>
                 {isLoading ? (isEditing ? 'Updating...' : 'Creating...') : isEditing ? 'Update' : 'Create'}
               </Button>
             </div>
           </form>
         </Form>
       </DialogContent>
+      {showUpgradeModal && settings && (
+        <UpgradeModal
+          onClose={() => setShowUpgradeModal(false)}
+          message={`You've reached your limit of ${settings.workspaces_limit} workspaces on the ${settings.plan} plan.`}
+          currentPlan={settings.plan}
+          type="workspaces"
+        />
+      )}
     </Dialog>
   );
 }

@@ -16,6 +16,8 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { WorkspaceSelector } from "@/components/workspace/workspace-selector";
+import { usePlanLimits } from "@/lib/hooks/use-plan-limits";
+import { UpgradeModal } from "@/components/upgrade-modal";
 
 const linkFormSchema = z.object({
   url: z
@@ -55,6 +57,8 @@ interface AddLinkFormProps {
 
 export const AddLinkForm = ({ link, workspaceId, onSuccess, onCancel }: AddLinkFormProps) => {
   const [isLoading, setIsLoading] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const { canAddLink, settings } = usePlanLimits();
   const isEditing = !!link;
 
   const form = useForm<LinkFormValues>({
@@ -79,6 +83,11 @@ export const AddLinkForm = ({ link, workspaceId, onSuccess, onCancel }: AddLinkF
   }, [link, workspaceId, form]);
 
   const onSubmit = async (data: LinkFormValues) => {
+    if (!isEditing && !canAddLink) {
+      setShowUpgradeModal(true);
+      return;
+    }
+
     setIsLoading(true);
     try {
       const response = await fetch(isEditing ? `/api/links/${link.id}` : "/api/links", {
@@ -89,8 +98,16 @@ export const AddLinkForm = ({ link, workspaceId, onSuccess, onCancel }: AddLinkF
         body: JSON.stringify(data),
       });
 
+      const result = await response.json();
+
+      if (response.status === 403 && result.needsUpgrade) {
+        setShowUpgradeModal(true);
+        alert(result.message);
+        return;
+      }
+
       if (!response.ok) {
-        throw new Error(isEditing ? "Failed to update link" : "Failed to add link");
+        throw new Error(result.error || (isEditing ? "Failed to update link" : "Failed to add link"));
       }
 
       form.reset();
@@ -223,11 +240,19 @@ export const AddLinkForm = ({ link, workspaceId, onSuccess, onCancel }: AddLinkF
               Cancel
             </Button>
           )}
-          <Button type="submit" disabled={isLoading}>
+          <Button type="submit" disabled={isLoading || (!isEditing && !canAddLink)}>
             {isLoading ? (isEditing ? "Updating..." : "Adding...") : (isEditing ? "Update Link" : "Add Link")}
           </Button>
         </div>
       </form>
+      {showUpgradeModal && settings && (
+        <UpgradeModal
+          onClose={() => setShowUpgradeModal(false)}
+          message={`You've reached your limit of ${settings.links_limit} links on the ${settings.plan} plan.`}
+          currentPlan={settings.plan}
+          type="links"
+        />
+      )}
     </Form>
   );
 };

@@ -22,6 +22,26 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Check user's plan limits before proceeding
+    const { data: settings } = await supabase
+      .from('user_settings')
+      .select('workspaces_count, workspaces_limit, plan')
+      .eq('user_id', user.id)
+      .single()
+
+    if (settings && settings.workspaces_count >= settings.workspaces_limit) {
+      return NextResponse.json(
+        {
+          error: 'Workspace limit exceeded',
+          message: `Your ${settings.plan} plan allows ${settings.workspaces_limit} workspaces. Please upgrade to add more.`,
+          current: settings.workspaces_count,
+          limit: settings.workspaces_limit,
+          needsUpgrade: true,
+        },
+        { status: 403 }
+      )
+    }
+
     const body = await request.json();
     const validation = createWorkspaceSchema.safeParse(body);
 
@@ -48,6 +68,18 @@ export async function POST(request: Request) {
       .single();
 
     if (error) {
+      // Database trigger might also throw limit error
+      if (error.message.includes('Workspace limit exceeded')) {
+        return NextResponse.json(
+          {
+            error: 'Workspace limit exceeded',
+            message: error.message,
+            needsUpgrade: true,
+          },
+          { status: 403 }
+        )
+      }
+
       return NextResponse.json(
         { error: "Failed to create workspace", details: error.message },
         { status: 500 }

@@ -26,6 +26,26 @@ export async function POST(request: Request) {
       );
     }
 
+    // Check user's plan limits before proceeding
+    const { data: settings } = await supabase
+      .from('user_settings')
+      .select('links_count, links_limit, plan')
+      .eq('user_id', user.id)
+      .single()
+
+    if (settings && settings.links_count >= settings.links_limit) {
+      return NextResponse.json(
+        {
+          error: 'Link limit exceeded',
+          message: `Your ${settings.plan} plan allows ${settings.links_limit} links. Please upgrade to add more.`,
+          current: settings.links_count,
+          limit: settings.links_limit,
+          needsUpgrade: true,
+        },
+        { status: 403 }
+      )
+    }
+
     const body = await request.json();
     const validation = createLinkSchema.safeParse(body);
 
@@ -54,6 +74,18 @@ export async function POST(request: Request) {
       .single();
 
     if (error) {
+      // Database trigger might also throw limit error
+      if (error.message.includes('Link limit exceeded')) {
+        return NextResponse.json(
+          {
+            error: 'Link limit exceeded',
+            message: error.message,
+            needsUpgrade: true,
+          },
+          { status: 403 }
+        )
+      }
+
       return NextResponse.json(
         { error: "Failed to create link", details: error.message },
         { status: 500 }

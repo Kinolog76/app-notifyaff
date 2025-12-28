@@ -12,6 +12,8 @@ import {
 } from "@/components/ui/dialog";
 import { parseCSV, downloadCSVTemplate, ParseResult } from "@/lib/csv-parser";
 import { Upload, Download, AlertCircle, CheckCircle2 } from "lucide-react";
+import { usePlanLimits } from "@/lib/hooks/use-plan-limits";
+import { UpgradeModal } from "@/components/upgrade-modal";
 
 interface BulkImportDialogProps {
   isOpen: boolean;
@@ -30,6 +32,8 @@ export const BulkImportDialog = ({
   const [isLoading, setIsLoading] = useState(false);
   const [parseResult, setParseResult] = useState<ParseResult | null>(null);
   const [importComplete, setImportComplete] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const { settings } = usePlanLimits();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -65,10 +69,17 @@ export const BulkImportDialog = ({
           }),
         });
 
+        const responseData = await response.json();
+
+        if (response.status === 403 && responseData.needsUpgrade) {
+          setShowUpgradeModal(true);
+          alert(responseData.message);
+          return;
+        }
+
         if (!response.ok) {
-          const error = await response.json();
-          console.error("API error response:", error);
-          throw new Error(error.details || error.error || "Failed to import links");
+          console.error("API error response:", responseData);
+          throw new Error(responseData.details || responseData.error || "Failed to import links");
         }
 
         setImportComplete(true);
@@ -225,6 +236,14 @@ export const BulkImportDialog = ({
           </Button>
         </DialogFooter>
       </DialogContent>
+      {showUpgradeModal && settings && (
+        <UpgradeModal
+          onClose={() => setShowUpgradeModal(false)}
+          message={`You've reached your limit of ${settings.links_limit} links on the ${settings.plan} plan and cannot import more.`}
+          currentPlan={settings.plan}
+          type="links"
+        />
+      )}
     </Dialog>
   );
 };
