@@ -21,6 +21,7 @@ import { Separator } from '@/components/ui/separator';
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import { createClient } from '@/utils/supabase/client';
+import { WorkspaceModal } from '@/components/workspace/workspace-modal';
 
 interface Workspace {
   id: string;
@@ -67,12 +68,9 @@ const SidebarContent = ({ onLinkClick }: { onLinkClick?: () => void }) => {
   const supabase = createClient();
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [selectedWorkspace, setSelectedWorkspace] = useState<string | null>(null);
+  const [isWorkspaceModalOpen, setIsWorkspaceModalOpen] = useState(false);
 
-  useEffect(() => {
-    fetchWorkspaces();
-  }, []);
-
-  async function fetchWorkspaces() {
+  const fetchWorkspaces = async () => {
     try {
       const { data } = await supabase
         .from('workspaces')
@@ -90,7 +88,12 @@ const SidebarContent = ({ onLinkClick }: { onLinkClick?: () => void }) => {
     } catch (error) {
       console.error('Error fetching workspaces:', error);
     }
-  }
+  };
+
+  useEffect(() => {
+    fetchWorkspaces();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -99,7 +102,7 @@ const SidebarContent = ({ onLinkClick }: { onLinkClick?: () => void }) => {
 
   return (
     <>
-      <div className='flex h-16 items-center border-b px-6'>
+      <div className='flex h-16 min-h-16 items-center border-b px-6'>
         <Link href='/dashboard' className='flex items-center gap-2' onClick={onLinkClick}>
           <div className='flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground'>
             <span className='text-sm font-bold'>LG</span>
@@ -143,7 +146,7 @@ const SidebarContent = ({ onLinkClick }: { onLinkClick?: () => void }) => {
                   variant='ghost'
                   size='sm'
                   className='h-6 w-6 p-0'
-                  onClick={() => router.push('/dashboard/workspaces/new')}>
+                  onClick={() => setIsWorkspaceModalOpen(true)}>
                   <Plus className='h-4 w-4' />
                   <span className='sr-only'>Add workspace</span>
                 </Button>
@@ -156,7 +159,7 @@ const SidebarContent = ({ onLinkClick }: { onLinkClick?: () => void }) => {
                       key={workspace.id}
                       onClick={() => {
                         setSelectedWorkspace(workspace.id);
-                        router.push(`/dashboard?workspace=${workspace.id}`);
+                        router.push(`/dashboard/workspaces/${workspace.id}`);
                         onLinkClick?.();
                       }}
                       className={cn(
@@ -222,15 +225,23 @@ const SidebarContent = ({ onLinkClick }: { onLinkClick?: () => void }) => {
           </Button>
         </div>
       </nav>
+
+      <WorkspaceModal
+        isOpen={isWorkspaceModalOpen}
+        onClose={() => setIsWorkspaceModalOpen(false)}
+        onSuccess={fetchWorkspaces}
+      />
     </>
   );
 };
 
 export const DashboardSidebar = () => {
   return (
-    <aside className='absolute hidden h-screen w-64 flex-col border-r bg-card lg:flex'>
-      <SidebarContent />
-    </aside>
+    <div className='fixed hidden h-screen w-64 flex-col border-r bg-card lg:flex'>
+      <aside className='flex-1 flex flex-col'>
+        <SidebarContent />
+      </aside>
+    </div>
   );
 };
 

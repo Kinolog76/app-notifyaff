@@ -42,6 +42,7 @@ interface Workspace {
 interface Link {
   id: string;
   url: string;
+  name: string;
   short_url?: string;
   category?: string;
   tags?: string[];
@@ -269,8 +270,9 @@ export const LinksTable = ({
                     />
                   </TableHead>
                 )}
-                <TableHead>URL</TableHead>
+                <TableHead>Name</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>URL</TableHead>
                 <TableHead>Workspace</TableHead>
                 <TableHead>Category</TableHead>
                 <TableHead>Tags</TableHead>
@@ -293,10 +295,21 @@ export const LinksTable = ({
                           onCheckedChange={(checked) =>
                             handleSelectLink(link.id, checked as boolean)
                           }
-                          aria-label={`Select link ${link.id}`}
+                          aria-label={`Select ${link.name}`}
                         />
                       </TableCell>
                     )}
+                    <TableCell
+                      className='font-medium'
+                      onClick={() => router.push(`/dashboard/links/${link.id}`)}>
+                      {link.name}
+                    </TableCell>
+                    <TableCell onClick={() => router.push(`/dashboard/links/${link.id}`)}>
+                      <Badge variant={config.variant} className='gap-1.5'>
+                        <div className={`h-2 w-2 rounded-full ${config.color}`} />
+                        {config.label}
+                      </Badge>
+                    </TableCell>
                     <TableCell className='max-w-md'>
                       <div className='flex flex-col gap-1'>
                         <a
@@ -314,12 +327,6 @@ export const LinksTable = ({
                           </span>
                         )}
                       </div>
-                    </TableCell>
-                    <TableCell onClick={() => router.push(`/dashboard/links/${link.id}`)}>
-                      <Badge variant={config.variant} className='gap-1.5'>
-                        <div className={`h-2 w-2 rounded-full ${config.color}`} />
-                        {config.label}
-                      </Badge>
                     </TableCell>
                     <TableCell onClick={() => router.push(`/dashboard/links/${link.id}`)}>
                       {link.workspaces ? (

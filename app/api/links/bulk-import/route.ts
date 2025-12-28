@@ -50,8 +50,8 @@ export async function POST(request: Request) {
       url: link.url,
       name: link.name,
       category: link.category || null,
-      tags: link.tags || null,
-      status: "active",
+      tags: link.tags ? link.tags.split(',').map(tag => tag.trim()).filter(Boolean) : null,
+      status: "checking",
     }));
 
     // Insert all links in a single query

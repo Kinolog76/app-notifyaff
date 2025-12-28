@@ -1,8 +1,10 @@
+```sql
 -- Links table
 CREATE TABLE links (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
   workspace_id UUID REFERENCES workspaces(id) ON DELETE SET NULL,
+  name TEXT,
   url TEXT NOT NULL,
   short_url TEXT,
   category TEXT,
@@ -37,3 +39,4 @@ CREATE POLICY "Users can update own links"
 CREATE POLICY "Users can delete own links"
   ON links FOR DELETE
   USING (auth.uid() = user_id);
+```

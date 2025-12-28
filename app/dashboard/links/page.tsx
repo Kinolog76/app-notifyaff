@@ -28,6 +28,7 @@ interface Workspace {
 interface Link {
   id: string;
   url: string;
+  name: string;
   short_url?: string;
   category?: string;
   tags?: string[];

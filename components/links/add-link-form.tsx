@@ -26,6 +26,10 @@ const linkFormSchema = z.object({
       (url) => url.startsWith("http://") || url.startsWith("https://"),
       "URL must start with http:// or https://"
     ),
+  name: z
+    .string()
+    .min(1, "Name is required")
+    .max(100, "Name must be less than 100 characters"),
   category: z.string().optional(),
   tags: z.array(z.string()).optional(),
   workspace_id: z.string().optional(),
@@ -36,6 +40,7 @@ type LinkFormValues = z.infer<typeof linkFormSchema>;
 interface Link {
   id: string;
   url: string;
+  name: string;
   category?: string;
   tags?: string[];
   workspace_id?: string;
@@ -56,6 +61,7 @@ export const AddLinkForm = ({ link, workspaceId, onSuccess, onCancel }: AddLinkF
     resolver: zodResolver(linkFormSchema),
     defaultValues: {
       url: link?.url || "",
+      name: link?.name || "",
       category: link?.category || "",
       tags: link?.tags || [],
       workspace_id: workspaceId || link?.workspace_id || "",
@@ -65,6 +71,7 @@ export const AddLinkForm = ({ link, workspaceId, onSuccess, onCancel }: AddLinkF
   useEffect(() => {
     form.reset({
       url: link?.url || "",
+      name: link?.name || "",
       category: link?.category || "",
       tags: link?.tags || [],
       workspace_id: workspaceId || link?.workspace_id || "",
@@ -113,6 +120,23 @@ export const AddLinkForm = ({ link, workspaceId, onSuccess, onCancel }: AddLinkF
               </FormControl>
               <FormDescription>
                 The full affiliate link you want to monitor
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="name"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Link Name</FormLabel>
+              <FormControl>
+                <Input placeholder="Product name or description" {...field} />
+              </FormControl>
+              <FormDescription>
+                A friendly name to identify this link
               </FormDescription>
               <FormMessage />
             </FormItem>
