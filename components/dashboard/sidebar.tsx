@@ -22,6 +22,7 @@ import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/s
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import { createClient } from '@/utils/supabase/client';
 import { WorkspaceModal } from '@/components/workspace/workspace-modal';
+import { eventEmitter, WORKSPACE_UPDATED } from '@/lib/events';
 
 interface Workspace {
   id: string;
@@ -92,6 +93,13 @@ const SidebarContent = ({ onLinkClick }: { onLinkClick?: () => void }) => {
 
   useEffect(() => {
     fetchWorkspaces();
+
+    // Listen for workspace updates from other components
+    eventEmitter.on(WORKSPACE_UPDATED, fetchWorkspaces);
+
+    return () => {
+      eventEmitter.off(WORKSPACE_UPDATED, fetchWorkspaces);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

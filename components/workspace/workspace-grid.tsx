@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, ExternalLink } from "lucide-react";
 import { WorkspaceContextMenu } from "./workspace-context-menu";
 import { WorkspaceModal } from "./workspace-modal";
+import { eventEmitter, WORKSPACE_UPDATED } from "@/lib/events";
 
 interface Workspace {
   id: string;
@@ -47,6 +48,7 @@ export function WorkspaceGrid({ workspaces, onCreateNew, onRefresh }: WorkspaceG
         throw new Error(data.error || 'Failed to delete workspace');
       }
 
+      eventEmitter.emit(WORKSPACE_UPDATED);
       onRefresh?.();
     } catch (error) {
       console.error('Error deleting workspace:', error);
@@ -72,6 +74,7 @@ export function WorkspaceGrid({ workspaces, onCreateNew, onRefresh }: WorkspaceG
         throw new Error(data.error || 'Failed to update workspace');
       }
 
+      eventEmitter.emit(WORKSPACE_UPDATED);
       onRefresh?.();
     } catch (error) {
       console.error('Error updating workspace:', error);

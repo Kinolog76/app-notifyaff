@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { eventEmitter, WORKSPACE_UPDATED } from '@/lib/events';
 import {
   Dialog,
   DialogContent,
@@ -117,6 +118,7 @@ export function WorkspaceModal({ isOpen, onClose, workspace, onSuccess }: Worksp
       }
 
       form.reset();
+      eventEmitter.emit(WORKSPACE_UPDATED);
       onSuccess?.();
       onClose();
     } catch (error) {

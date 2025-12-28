@@ -20,6 +20,7 @@ import { BulkImportDialog } from '@/components/links/bulk-import-dialog';
 import { StatsOverviewCard } from '@/components/dashboard/stats-overview-card';
 import { WorkspaceGrid } from '@/components/workspace/workspace-grid';
 import { WorkspaceModal } from '@/components/workspace/workspace-modal';
+import { eventEmitter, WORKSPACE_UPDATED } from '@/lib/events';
 import { Plus, Upload } from 'lucide-react';
 
 export default function DashboardPage() {
@@ -49,6 +50,13 @@ export default function DashboardPage() {
     };
 
     getUser();
+
+    // Listen for workspace updates from other components
+    eventEmitter.on(WORKSPACE_UPDATED, fetchWorkspaces);
+
+    return () => {
+      eventEmitter.off(WORKSPACE_UPDATED, fetchWorkspaces);
+    };
   }, [router, supabase]);
 
   const fetchLinks = async () => {
