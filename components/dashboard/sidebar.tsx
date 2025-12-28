@@ -134,64 +134,63 @@ const SidebarContent = ({ onLinkClick }: { onLinkClick?: () => void }) => {
         </div>
 
         <Separator className='my-2' />
-
+        <div className='mb-2'>
+          <div className='mb-2 flex items-center justify-between px-3'>
+            <span className='text-xs font-semibold uppercase text-muted-foreground'>
+              Workspaces
+            </span>
+            <Button
+              variant='ghost'
+              size='sm'
+              className='h-6 w-6 p-0'
+              onClick={() => setIsWorkspaceModalOpen(true)}>
+              <Plus className='h-4 w-4' />
+              <span className='sr-only'>Add workspace</span>
+            </Button>
+          </div>
+        </div>
         {workspaces.length > 0 && (
           <>
-            <div className='mb-2'>
-              <div className='mb-2 flex items-center justify-between px-3'>
-                <span className='text-xs font-semibold uppercase text-muted-foreground'>
-                  Workspaces
-                </span>
-                <Button
-                  variant='ghost'
-                  size='sm'
-                  className='h-6 w-6 p-0'
-                  onClick={() => setIsWorkspaceModalOpen(true)}>
-                  <Plus className='h-4 w-4' />
-                  <span className='sr-only'>Add workspace</span>
-                </Button>
-              </div>
-              <div className='flex flex-col gap-1'>
-                {workspaces.slice(0, 5).map((workspace) => {
-                  const isSelected = selectedWorkspace === workspace.id;
-                  return (
-                    <button
-                      key={workspace.id}
-                      onClick={() => {
-                        setSelectedWorkspace(workspace.id);
-                        router.push(`/dashboard/workspaces/${workspace.id}`);
-                        onLinkClick?.();
-                      }}
-                      className={cn(
-                        'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors text-left',
-                        isSelected
-                          ? 'bg-accent text-accent-foreground'
-                          : 'text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground',
-                      )}>
-                      <div
-                        className='h-3 w-3 flex-shrink-0 rounded-full'
-                        style={{ backgroundColor: workspace.color }}
-                      />
-                      <span className='truncate'>
-                        {workspace.icon} {workspace.name}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-              {workspaces.length > 5 && (
-                <Link
-                  href='/dashboard/workspaces'
-                  onClick={onLinkClick}
-                  className='mt-1 flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:text-accent-foreground'>
-                  <FolderKanban className='h-4 w-4' />
-                  View all workspaces
-                </Link>
-              )}
+            <div className='flex flex-col gap-1'>
+              {workspaces.slice(0, 5).map((workspace) => {
+                const isSelected = selectedWorkspace === workspace.id;
+                return (
+                  <button
+                    key={workspace.id}
+                    onClick={() => {
+                      setSelectedWorkspace(workspace.id);
+                      router.push(`/dashboard/workspaces/${workspace.id}`);
+                      onLinkClick?.();
+                    }}
+                    className={cn(
+                      'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors text-left',
+                      isSelected
+                        ? 'bg-accent text-accent-foreground'
+                        : 'text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground',
+                    )}>
+                    <div
+                      className='h-3 w-3 flex-shrink-0 rounded-full'
+                      style={{ backgroundColor: workspace.color }}
+                    />
+                    <span className='truncate'>
+                      {workspace.icon} {workspace.name}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
-            <Separator className='my-2' />
+            {workspaces.length > 5 && (
+              <Link
+                href='/dashboard/workspaces'
+                onClick={onLinkClick}
+                className='mt-1 flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:text-accent-foreground'>
+                <FolderKanban className='h-4 w-4' />
+                View all workspaces
+              </Link>
+            )}
           </>
         )}
+        <Separator className='my-2' />
 
         <div className='flex flex-col gap-1'>
           {bottomNavItems.map((item) => {

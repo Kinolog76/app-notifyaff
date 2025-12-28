@@ -11,6 +11,7 @@ const bulkImportSchema = z.object({
       tags: z.string().optional(),
     })
   ),
+  workspaceId: z.string().optional(),
 });
 
 export async function POST(request: Request) {
@@ -35,7 +36,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const { links } = validation.data;
+    const { links, workspaceId } = validation.data;
 
     if (links.length === 0) {
       return NextResponse.json(
@@ -52,6 +53,7 @@ export async function POST(request: Request) {
       category: link.category || null,
       tags: link.tags ? link.tags.split(',').map(tag => tag.trim()).filter(Boolean) : null,
       status: "checking",
+      workspace_id: workspaceId || null,
     }));
 
     // Insert all links in a single query

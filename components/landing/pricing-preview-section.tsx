@@ -124,7 +124,7 @@ export const PricingPreviewSection = () => {
                   </ul>
 
                   <Button asChild variant={plan.popular ? 'default' : 'outline'} className='w-full'>
-                    <Link href='/auth/login'>{plan.cta}</Link>
+                    <Link href='/login'>{plan.cta}</Link>
                   </Button>
                 </div>
               </Card>

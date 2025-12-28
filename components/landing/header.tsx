@@ -85,10 +85,10 @@ export const Header = () => {
           {/* Desktop CTA */}
           <div className='hidden lg:flex lg:flex-1 lg:justify-end lg:gap-x-4'>
             <Button asChild variant='ghost' size='sm'>
-              <Link href='/auth/login'>Sign In</Link>
+              <Link href='/login'>Sign In</Link>
             </Button>
             <Button asChild size='sm'>
-              <Link href='/auth/login'>Start Free Trial</Link>
+              <Link href='/login'>Start Free Trial</Link>
             </Button>
           </div>
         </nav>
@@ -138,12 +138,12 @@ export const Header = () => {
 
           <div className='border-t border-zinc-200 dark:border-zinc-800 pt-6 space-y-3'>
             <Button asChild variant='ghost' size='lg' className='w-full'>
-              <Link href='/auth/login' onClick={() => setMobileMenuOpen(false)}>
+              <Link href='/login' onClick={() => setMobileMenuOpen(false)}>
                 Sign In
               </Link>
             </Button>
             <Button asChild size='lg' className='w-full'>
-              <Link href='/auth/login' onClick={() => setMobileMenuOpen(false)}>
+              <Link href='/login' onClick={() => setMobileMenuOpen(false)}>
                 Start Free Trial
               </Link>
             </Button>

@@ -92,7 +92,7 @@ export default function LinkDetailPage() {
       } = await supabase.auth.getUser();
 
       if (!user) {
-        router.push('/auth/login');
+        router.push('/login');
       } else {
         fetchLinkDetails();
         fetchLinkChecks();

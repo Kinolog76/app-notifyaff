@@ -17,12 +17,14 @@ interface BulkImportDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
+  workspaceId?: string;
 }
 
 export const BulkImportDialog = ({
   isOpen,
   onClose,
   onSuccess,
+  workspaceId,
 }: BulkImportDialogProps) => {
   const [file, setFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -57,7 +59,10 @@ export const BulkImportDialog = ({
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ links: result.data }),
+          body: JSON.stringify({
+            links: result.data,
+            workspaceId: workspaceId
+          }),
         });
 
         if (!response.ok) {

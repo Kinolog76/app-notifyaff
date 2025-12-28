@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { createClient } from "@/utils/supabase/client";
-import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { createClient } from '@/utils/supabase/client';
+import { DashboardLayout } from '@/components/dashboard/dashboard-layout';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -13,14 +13,14 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import { AddLinkForm } from "@/components/links/add-link-form";
-import { LinksTable } from "@/components/links/links-table";
-import { BulkImportDialog } from "@/components/links/bulk-import-dialog";
-import { StatsOverviewCard } from "@/components/dashboard/stats-overview-card";
-import { WorkspaceGrid } from "@/components/workspace/workspace-grid";
-import { WorkspaceModal } from "@/components/workspace/workspace-modal";
-import { Plus, Upload } from "lucide-react";
+} from '@/components/ui/dialog';
+import { AddLinkForm } from '@/components/links/add-link-form';
+import { LinksTable } from '@/components/links/links-table';
+import { BulkImportDialog } from '@/components/links/bulk-import-dialog';
+import { StatsOverviewCard } from '@/components/dashboard/stats-overview-card';
+import { WorkspaceGrid } from '@/components/workspace/workspace-grid';
+import { WorkspaceModal } from '@/components/workspace/workspace-modal';
+import { Plus, Upload } from 'lucide-react';
 
 export default function DashboardPage() {
   const [user, setUser] = useState<any>(null);
@@ -40,7 +40,7 @@ export default function DashboardPage() {
       } = await supabase.auth.getUser();
 
       if (!user) {
-        router.push("/auth/login");
+        router.push('/login');
       } else {
         setUser(user);
         fetchLinks();
@@ -53,12 +53,12 @@ export default function DashboardPage() {
 
   const fetchLinks = async () => {
     const { data, error } = await supabase
-      .from("links")
-      .select("*")
-      .order("created_at", { ascending: false });
+      .from('links')
+      .select('*, workspaces(id, name, icon, color)')
+      .order('created_at', { ascending: false });
 
     if (error) {
-      console.error("Error fetching links:", error);
+      console.error('Error fetching links:', error);
     } else {
       setLinks(data || []);
     }
@@ -67,10 +67,10 @@ export default function DashboardPage() {
   const fetchWorkspaces = async () => {
     try {
       const { data: workspacesData, error } = await supabase
-        .from("workspaces")
-        .select("*")
-        .order("is_default", { ascending: false })
-        .order("created_at", { ascending: false });
+        .from('workspaces')
+        .select('*')
+        .order('is_default', { ascending: false })
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
 
@@ -78,13 +78,13 @@ export default function DashboardPage() {
       const workspacesWithStats = await Promise.all(
         (workspacesData || []).map(async (workspace) => {
           const { data: links } = await supabase
-            .from("links")
-            .select("status")
-            .eq("workspace_id", workspace.id);
+            .from('links')
+            .select('status')
+            .eq('workspace_id', workspace.id);
 
           const linkCount = links?.length || 0;
-          const activeCount = links?.filter((l) => l.status === "active").length || 0;
-          const brokenCount = links?.filter((l) => l.status === "error").length || 0;
+          const activeCount = links?.filter((l) => l.status === 'active').length || 0;
+          const brokenCount = links?.filter((l) => l.status === 'error').length || 0;
 
           return {
             ...workspace,
@@ -92,12 +92,12 @@ export default function DashboardPage() {
             activeCount,
             brokenCount,
           };
-        })
+        }),
       );
 
       setWorkspaces(workspacesWithStats);
     } catch (error) {
-      console.error("Error fetching workspaces:", error);
+      console.error('Error fetching workspaces:', error);
     }
   };
 
@@ -119,17 +119,17 @@ export default function DashboardPage() {
   const handleDelete = async (id: string) => {
     try {
       const response = await fetch(`/api/links/${id}`, {
-        method: "DELETE",
+        method: 'DELETE',
       });
 
       if (!response.ok) {
-        throw new Error("Failed to delete link");
+        throw new Error('Failed to delete link');
       }
 
       fetchLinks();
     } catch (error) {
-      console.error("Error deleting link:", error);
-      alert("Failed to delete link");
+      console.error('Error deleting link:', error);
+      alert('Failed to delete link');
     }
   };
 
@@ -142,33 +142,33 @@ export default function DashboardPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
-        <div className="flex items-center flex-wrap gap-4 justify-between">
+      <div className='space-y-6'>
+        <div className='flex items-center flex-wrap gap-4 justify-between'>
           <div>
-            <h1 className="text-3xl font-bold">
-              Dashboard
-            </h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Welcome back, {user.email}
-            </p>
+            <h1 className='text-3xl font-bold'>Dashboard</h1>
+            <p className='mt-1 text-sm text-muted-foreground'>Welcome back, {user.email}</p>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setIsBulkImportOpen(true)}>
-              <Upload className="h-4 w-4" />
+          <div className='flex gap-2'>
+            <Button variant='outline' onClick={() => setIsBulkImportOpen(true)}>
+              <Upload className='h-4 w-4' />
               Import CSV
             </Button>
             <Dialog open={isDialogOpen} onOpenChange={handleDialogChange}>
               <DialogTrigger asChild>
                 <Button>
-                  <Plus className="h-4 w-4" />
+                  <Plus className='h-4 w-4' />
                   Add Link
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[550px]">
+              <DialogContent className='sm:max-w-[550px]'>
                 <DialogHeader>
-                  <DialogTitle>{editingLink ? "Edit Affiliate Link" : "Add New Affiliate Link"}</DialogTitle>
+                  <DialogTitle>
+                    {editingLink ? 'Edit Affiliate Link' : 'Add New Affiliate Link'}
+                  </DialogTitle>
                   <DialogDescription>
-                    {editingLink ? "Update your affiliate link details." : "Add a new affiliate link to start monitoring its health and performance."}
+                    {editingLink
+                      ? 'Update your affiliate link details.'
+                      : 'Add a new affiliate link to start monitoring its health and performance.'}
                   </DialogDescription>
                 </DialogHeader>
                 <AddLinkForm
@@ -183,9 +183,9 @@ export default function DashboardPage() {
 
         <StatsOverviewCard links={links} />
 
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-semibold">Your Workspaces</h2>
+        <div className='space-y-4'>
+          <div className='flex items-center justify-between'>
+            <h2 className='text-2xl font-semibold'>Your Workspaces</h2>
           </div>
           <WorkspaceGrid
             workspaces={workspaces}
@@ -194,10 +194,8 @@ export default function DashboardPage() {
           />
         </div>
 
-        <Card className="p-6">
-          <h2 className="text-lg font-semibold mb-4">
-            Recent Links
-          </h2>
+        <Card className='p-6'>
+          <h2 className='text-lg font-semibold mb-4'>Recent Links</h2>
           <LinksTable links={links.slice(0, 10)} onEdit={handleEdit} onDelete={handleDelete} />
         </Card>
       </div>
