@@ -61,10 +61,10 @@ interface LinkCheck {
   id: string;
   link_id: string;
   checked_at: string;
-  status_code: number;
-  response_time: number;
+  status_code: number | null;
+  response_time_ms: number;
   error_message?: string;
-  redirect_chain?: string;
+  redirect_chain?: string[];
 }
 
 const statusConfig = {
@@ -79,7 +79,9 @@ export default function LinkDetailPage() {
   const [checks, setChecks] = useState<LinkCheck[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isChecking, setIsChecking] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [checkError, setCheckError] = useState<string | null>(null);
   const router = useRouter();
   const params = useParams();
   const supabase = createClient();
@@ -169,8 +171,42 @@ export default function LinkDetailPage() {
   };
 
   const handleCheckNow = async () => {
-    // TODO: Implement manual link check
-    alert('Manual check functionality coming soon!');
+    setIsChecking(true);
+    setCheckError(null);
+
+    try {
+      const response = await fetch(`/api/links/${linkId}/check`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to check link');
+      }
+
+      // Refresh link details and checks to show updated status
+      await fetchLinkDetails();
+      await fetchLinkChecks();
+
+      // Show success message with check result
+      const { checkResult } = result.data;
+      const statusText = checkResult.success ? 'Link is working!' : 'Link has issues';
+      const details = checkResult.statusCode
+        ? `Status: ${checkResult.statusCode} | Response time: ${checkResult.responseTime}ms`
+        : checkResult.error || 'Unknown error';
+
+      alert(`${statusText}\n${details}`);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to check link';
+      setCheckError(errorMessage);
+      alert(`Error: ${errorMessage}`);
+    } finally {
+      setIsChecking(false);
+    }
   };
 
   const handleToggleTracking = async () => {
@@ -216,7 +252,7 @@ export default function LinkDetailPage() {
   const calculateUptime = () => {
     if (checks.length === 0) return 'N/A';
     const successfulChecks = checks.filter(
-      (check) => check.status_code >= 200 && check.status_code < 400,
+      (check) => check.status_code !== null && check.status_code >= 200 && check.status_code < 400,
     ).length;
     const percentage = (successfulChecks / checks.length) * 100;
     return `${percentage.toFixed(1)}%`;
@@ -224,7 +260,7 @@ export default function LinkDetailPage() {
 
   const calculateAvgResponseTime = () => {
     if (checks.length === 0) return 'N/A';
-    const total = checks.reduce((sum, check) => sum + check.response_time, 0);
+    const total = checks.reduce((sum, check) => sum + check.response_time_ms, 0);
     const avg = total / checks.length;
     return `${avg.toFixed(0)}ms`;
   };
@@ -285,9 +321,9 @@ export default function LinkDetailPage() {
             </div>
           </div>
           <div className='flex items-center gap-2 flex-wrap'>
-            <Button variant='outline' onClick={handleCheckNow}>
-              <RefreshCw className='h-4 w-4' />
-              Check Now
+            <Button variant='outline' onClick={handleCheckNow} disabled={isChecking}>
+              <RefreshCw className={`h-4 w-4 ${isChecking ? 'animate-spin' : ''}`} />
+              {isChecking ? 'Checking...' : 'Check Now'}
             </Button>
             <Button variant='outline' onClick={() => setIsEditDialogOpen(true)}>
               <Pencil className='h-4 w-4' />
@@ -431,11 +467,15 @@ export default function LinkDetailPage() {
                         {formatDate(check.checked_at)}
                       </TableCell>
                       <TableCell>
-                        <span className={getStatusCodeColor(check.status_code)}>
-                          {check.status_code}
-                        </span>
+                        {check.status_code !== null ? (
+                          <span className={getStatusCodeColor(check.status_code)}>
+                            {check.status_code}
+                          </span>
+                        ) : (
+                          <span className='text-muted-foreground'>N/A</span>
+                        )}
                       </TableCell>
-                      <TableCell>{check.response_time}ms</TableCell>
+                      <TableCell>{check.response_time_ms}ms</TableCell>
                       <TableCell>
                         {check.error_message ? (
                           <span className='text-red-600 text-sm'>{check.error_message}</span>

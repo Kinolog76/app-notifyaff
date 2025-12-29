@@ -77,12 +77,18 @@ export async function PUT(
       );
     }
 
+    // Clean up the data - convert empty strings to null
+    const updateData = {
+      ...validation.data,
+      workspace_id: validation.data.workspace_id || null,
+      category: validation.data.category || null,
+      tags: validation.data.tags || null,
+      updated_at: new Date().toISOString(),
+    };
+
     const { data, error } = await supabase
       .from("links")
-      .update({
-        ...validation.data,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updateData)
       .eq("id", id)
       .eq("user_id", user.id)
       .select()
@@ -133,12 +139,18 @@ export async function PATCH(
       );
     }
 
+    // Clean up the data - convert empty strings to null
+    const updateData = {
+      ...validation.data,
+      workspace_id: validation.data.workspace_id || null,
+      category: validation.data.category || null,
+      tags: validation.data.tags || null,
+      updated_at: new Date().toISOString(),
+    };
+
     const { data, error } = await supabase
       .from("links")
-      .update({
-        ...validation.data,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updateData)
       .eq("id", id)
       .eq("user_id", user.id)
       .select()

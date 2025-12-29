@@ -34,7 +34,7 @@ const linkFormSchema = z.object({
     .max(100, "Name must be less than 100 characters"),
   category: z.string().optional(),
   tags: z.array(z.string()).optional(),
-  workspace_id: z.string().optional(),
+  workspace_id: z.string().optional().or(z.literal("")),
 });
 
 type LinkFormValues = z.infer<typeof linkFormSchema>;
@@ -213,7 +213,7 @@ export const AddLinkForm = ({ link, workspaceId, onSuccess, onCancel }: AddLinkF
             name="workspace_id"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Workspace</FormLabel>
+                <FormLabel>Workspace (Optional)</FormLabel>
                 <FormControl>
                   <WorkspaceSelector
                     value={field.value}
@@ -221,7 +221,7 @@ export const AddLinkForm = ({ link, workspaceId, onSuccess, onCancel }: AddLinkF
                   />
                 </FormControl>
                 <FormDescription>
-                  Select which workspace this link belongs to
+                  Select which workspace this link belongs to (optional)
                 </FormDescription>
                 <FormMessage />
               </FormItem>
