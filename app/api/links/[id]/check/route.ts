@@ -1,13 +1,11 @@
 import { createClient } from "@/utils/supabase/server";
 import { NextResponse } from "next/server";
-import { checkLinkWithRetry } from "@/lib/link-checker-retry";
-import { storeLinkCheck } from "@/lib/link-check-storage";
-import { setLinkChecking, updateLinkStatusFromCheck } from "@/lib/link-status-updater";
+import { checkLink } from "@/lib/link-checker-server";
+import { getLatestLinkCheck } from "@/lib/supabase/link-checks-server";
 
 /**
  * POST /api/links/[id]/check
  * Manual link check endpoint
- * Steps 25-30: Create endpoint, validate ownership, check link, store results, update status
  */
 export async function POST(
   request: Request,
@@ -17,7 +15,7 @@ export async function POST(
     const supabase = await createClient();
     const { id: linkId } = await params;
 
-    // Step 26: Validate user is authenticated
+    // Verify user owns link (RLS handles this)
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -29,79 +27,43 @@ export async function POST(
       );
     }
 
-    // Step 26: Validate user owns the link
+    // Get link from database by ID
     const { data: link, error: linkError } = await supabase
       .from("links")
-      .select("id, url, user_id, status")
+      .select("id, url, status")
       .eq("id", linkId)
-      .eq("user_id", user.id)
       .single();
 
     if (linkError || !link) {
       return NextResponse.json(
-        {
-          error: "Link not found",
-          details: "The requested link does not exist or you don't have permission to access it"
-        },
+        { error: "Link not found" },
         { status: 404 }
       );
     }
 
-    // Step 22: Mark as "checking" while in progress
-    const setCheckingResult = await setLinkChecking(linkId);
-    if (!setCheckingResult.success) {
-      console.error("Failed to set checking status:", setCheckingResult.error);
-      // Continue anyway - this is not critical
-    }
+    // Call link-checker function with link_id
+    // Checker saves to link_checks automatically
+    const checkResult = await checkLink(link.url, linkId);
 
-    // Step 27: Call link checker function with retry logic (Steps 43-45)
-    let checkResult;
-    try {
-      checkResult = await checkLinkWithRetry(link.url);
-    } catch (error) {
-      console.error("Link check failed:", error);
-      return NextResponse.json(
-        {
-          error: "Failed to check link",
-          details: error instanceof Error ? error.message : "Unknown error occurred"
-        },
-        { status: 500 }
-      );
-    }
+    // Get the latest check record
+    const latestCheck = await getLatestLinkCheck(linkId);
 
-    // Step 28: Store results in database
-    const storageResult = await storeLinkCheck({
-      linkId,
-      checkResult,
-    });
+    // Get updated link data
+    const { data: updatedLink } = await supabase
+      .from("links")
+      .select("status, last_checked_at")
+      .eq("id", linkId)
+      .single();
 
-    if (!storageResult.success) {
-      console.error("Failed to store check result:", storageResult.error);
-      // Continue to update status even if storage fails
-    }
-
-    // Step 29: Update link status (with notification trigger)
-    const statusResult = await updateLinkStatusFromCheck(linkId, checkResult, user.id);
-
-    if (!statusResult.success) {
-      console.error("Failed to update link status:", statusResult.error);
-      return NextResponse.json(
-        {
-          error: "Failed to update link status",
-          details: statusResult.error
-        },
-        { status: 500 }
-      );
-    }
-
-    // Step 30: Return results to frontend
+    // Return check result + updated link status
     return NextResponse.json(
       {
         message: "Link checked successfully",
         data: {
           linkId,
           url: link.url,
-          status: statusResult.status,
+          status: updatedLink?.status || link.status,
+          lastCheckedAt: updatedLink?.last_checked_at,
           checkResult: {
             success: checkResult.success,
             finalUrl: checkResult.finalUrl,
@@ -110,10 +72,8 @@ export async function POST(
             redirectChain: checkResult.redirectChain,
             error: checkResult.error,
             timestamp: checkResult.timestamp,
-            retryCount: checkResult.retryCount,
-            confidenceScore: checkResult.confidenceScore,
           },
-          checkRecord: storageResult.data,
+          checkRecord: latestCheck,
         },
       },
       { status: 200 }

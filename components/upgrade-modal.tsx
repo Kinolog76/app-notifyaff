@@ -56,7 +56,6 @@ export function UpgradeModal({ onClose, message, currentPlan = 'free', type }: U
           <h2 className="text-2xl font-bold">Upgrade Required</h2>
           <Button
             variant="ghost"
-            size="icon"
             onClick={onClose}
             className="h-8 w-8"
           >

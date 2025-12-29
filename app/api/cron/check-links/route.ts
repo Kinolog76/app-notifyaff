@@ -1,8 +1,6 @@
 import { createClient } from "@/utils/supabase/server";
 import { NextResponse } from "next/server";
-import { checkLinkWithRetry } from "@/lib/link-checker-retry";
-import { storeLinkCheck } from "@/lib/link-check-storage";
-import { setLinkChecking, updateLinkStatusFromCheck } from "@/lib/link-status-updater";
+import { checkLink } from "@/lib/link-checker-server";
 
 const BATCH_SIZE = 50;
 const RATE_LIMIT_DELAY_MS = 100; // 100ms between requests to avoid overwhelming servers
@@ -47,31 +45,18 @@ function delay(ms: number): Promise<void> {
 
 /**
  * Check a single link and store results
- * Uses retry logic (Steps 43-45) for resilient checking
- * Triggers notifications if status changed (Steps 54-59)
  */
-async function checkSingleLink(linkId: string, url: string, userId: string) {
+async function checkSingleLink(linkId: string, url: string) {
   try {
-    // Set status to checking
-    await setLinkChecking(linkId);
-
-    // Perform the check with retry logic (Steps 43-45)
-    const checkResult = await checkLinkWithRetry(url);
-
-    // Store the check result (Step 46: includes retry_count)
-    await storeLinkCheck({ linkId, checkResult });
-
-    // Update link status (with notification trigger)
-    const statusResult = await updateLinkStatusFromCheck(linkId, checkResult, userId);
+    // Checker automatically saves to link_checks
+    const checkResult = await checkLink(url, linkId);
 
     return {
       linkId,
-      success: true,
-      status: statusResult.status,
+      success: checkResult.success,
       statusCode: checkResult.statusCode,
       responseTime: checkResult.responseTime,
-      retryCount: checkResult.retryCount,
-      confidenceScore: checkResult.confidenceScore,
+      error: checkResult.error,
     };
   } catch (error) {
     console.error(`Failed to check link ${linkId}:`, error);
@@ -85,14 +70,12 @@ async function checkSingleLink(linkId: string, url: string, userId: string) {
 
 /**
  * Process a batch of links with rate limiting
- * Step 39: Process links in batches (50 at a time)
- * Step 41: Add rate limiting to avoid overwhelming servers
  */
-async function processBatch(links: Array<{ id: string; url: string; user_id: string }>) {
+async function processBatch(links: Array<{ id: string; url: string }>) {
   const results = [];
 
   for (const link of links) {
-    const result = await checkSingleLink(link.id, link.url, link.user_id);
+    const result = await checkSingleLink(link.id, link.url);
     results.push(result);
 
     // Rate limiting delay between requests
@@ -127,7 +110,7 @@ export async function GET(request: Request) {
 
     const supabase = await createClient();
 
-    // Step 37 & 38: Fetch links that need checking based on last_checked_at and user plan
+    // Fetch links that need checking with their IDs
     const { data: linksToCheck, error: fetchError } = await supabase
       .from('links')
       .select(`
@@ -137,6 +120,7 @@ export async function GET(request: Request) {
         user_id,
         user_settings!inner(plan)
       `)
+      .eq('tracking_enabled', true)
       .order('last_checked_at', { ascending: true, nullsFirst: true });
 
     if (fetchError) {
@@ -207,7 +191,7 @@ export async function GET(request: Request) {
       console.log(`[CRON] Processing batch ${i + 1}/${batches.length} (${batch.length} links)`);
 
       const batchResults = await processBatch(
-        batch.map((link: any) => ({ id: link.id, url: link.url, user_id: link.user_id }))
+        batch.map((link: any) => ({ id: link.id, url: link.url }))
       );
 
       totalChecked += batchResults.length;

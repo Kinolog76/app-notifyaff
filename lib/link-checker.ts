@@ -1,4 +1,6 @@
 import axios, { AxiosError } from 'axios';
+import { insertLinkCheck } from './supabase/link-checks';
+import { updateLinkStatus, determineStatus } from './link-status';
 
 export interface LinkCheckResult {
   success: boolean;
@@ -18,7 +20,7 @@ interface RedirectInfo {
 const MAX_REDIRECTS = 5;
 const TIMEOUT_MS = 10000; // 10 seconds
 
-export async function checkLink(url: string): Promise<LinkCheckResult> {
+export async function checkLink(url: string, linkId?: string): Promise<LinkCheckResult> {
   const startTime = Date.now();
   const redirectChain: string[] = [url];
 
@@ -51,7 +53,7 @@ export async function checkLink(url: string): Promise<LinkCheckResult> {
       redirectChain.push(finalUrl);
     }
 
-    return {
+    const result = {
       success: response.status >= 200 && response.status < 400,
       finalUrl,
       statusCode: response.status,
@@ -59,15 +61,32 @@ export async function checkLink(url: string): Promise<LinkCheckResult> {
       redirectChain,
       timestamp: new Date(),
     };
+
+    // Save to database if link_id provided
+    if (linkId) {
+      await insertLinkCheck({
+        link_id: linkId,
+        status_code: response.status,
+        response_time_ms: responseTime,
+        redirect_chain: redirectChain.length > 1 ? redirectChain : null,
+        error_message: null,
+      });
+
+      // Update link status
+      await updateLinkStatus(linkId, determineStatus(response.status));
+    }
+
+    return result;
   } catch (error) {
     const responseTime = Date.now() - startTime;
+    let result: LinkCheckResult;
 
     if (axios.isAxiosError(error)) {
       const axiosError = error as AxiosError;
 
       // Handle timeout
       if (axiosError.code === 'ECONNABORTED') {
-        return {
+        result = {
           success: false,
           finalUrl: url,
           statusCode: null,
@@ -77,10 +96,9 @@ export async function checkLink(url: string): Promise<LinkCheckResult> {
           timestamp: new Date(),
         };
       }
-
       // Handle DNS errors
-      if (axiosError.code === 'ENOTFOUND' || axiosError.code === 'EAI_AGAIN') {
-        return {
+      else if (axiosError.code === 'ENOTFOUND' || axiosError.code === 'EAI_AGAIN') {
+        result = {
           success: false,
           finalUrl: url,
           statusCode: null,
@@ -90,12 +108,11 @@ export async function checkLink(url: string): Promise<LinkCheckResult> {
           timestamp: new Date(),
         };
       }
-
       // Handle SSL/TLS errors
-      if (axiosError.code === 'CERT_HAS_EXPIRED' ||
+      else if (axiosError.code === 'CERT_HAS_EXPIRED' ||
           axiosError.code === 'UNABLE_TO_VERIFY_LEAF_SIGNATURE' ||
           axiosError.code === 'SELF_SIGNED_CERT_IN_CHAIN') {
-        return {
+        result = {
           success: false,
           finalUrl: url,
           statusCode: null,
@@ -105,12 +122,11 @@ export async function checkLink(url: string): Promise<LinkCheckResult> {
           timestamp: new Date(),
         };
       }
-
       // Handle network errors
-      if (axiosError.code === 'ECONNREFUSED' ||
+      else if (axiosError.code === 'ECONNREFUSED' ||
           axiosError.code === 'ECONNRESET' ||
           axiosError.code === 'ETIMEDOUT') {
-        return {
+        result = {
           success: false,
           finalUrl: url,
           statusCode: null,
@@ -120,10 +136,9 @@ export async function checkLink(url: string): Promise<LinkCheckResult> {
           timestamp: new Date(),
         };
       }
-
       // Handle HTTP error responses
-      if (axiosError.response) {
-        return {
+      else if (axiosError.response) {
+        result = {
           success: false,
           finalUrl: axiosError.response.request?.res?.responseUrl || url,
           statusCode: axiosError.response.status,
@@ -133,22 +148,22 @@ export async function checkLink(url: string): Promise<LinkCheckResult> {
           timestamp: new Date(),
         };
       }
-
       // Generic axios error
-      return {
-        success: false,
-        finalUrl: url,
-        statusCode: null,
-        responseTime,
-        redirectChain,
-        error: `Request failed: ${axiosError.message}`,
-        timestamp: new Date(),
-      };
+      else {
+        result = {
+          success: false,
+          finalUrl: url,
+          statusCode: null,
+          responseTime,
+          redirectChain,
+          error: `Request failed: ${axiosError.message}`,
+          timestamp: new Date(),
+        };
+      }
     }
-
     // Handle invalid URL
-    if (error instanceof TypeError && error.message.includes('Invalid URL')) {
-      return {
+    else if (error instanceof TypeError && error.message.includes('Invalid URL')) {
+      result = {
         success: false,
         finalUrl: url,
         statusCode: null,
@@ -158,16 +173,33 @@ export async function checkLink(url: string): Promise<LinkCheckResult> {
         timestamp: new Date(),
       };
     }
-
     // Unknown error
-    return {
-      success: false,
-      finalUrl: url,
-      statusCode: null,
-      responseTime,
-      redirectChain,
-      error: error instanceof Error ? error.message : 'Unknown error occurred',
-      timestamp: new Date(),
-    };
+    else {
+      result = {
+        success: false,
+        finalUrl: url,
+        statusCode: null,
+        responseTime,
+        redirectChain,
+        error: error instanceof Error ? error.message : 'Unknown error occurred',
+        timestamp: new Date(),
+      };
+    }
+
+    // Save failed check to database if link_id provided
+    if (linkId) {
+      await insertLinkCheck({
+        link_id: linkId,
+        status_code: result.statusCode,
+        response_time_ms: responseTime,
+        redirect_chain: null,
+        error_message: result.error || null,
+      });
+
+      // Update link status to broken
+      await updateLinkStatus(linkId, determineStatus(result.statusCode));
+    }
+
+    return result;
   }
 }
