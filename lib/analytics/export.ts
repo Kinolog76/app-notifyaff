@@ -1,4 +1,4 @@
-import { format } from "date-fns";
+import { format } from 'date-fns';
 
 export interface ExportData {
   overview: {
@@ -27,50 +27,77 @@ export interface ExportData {
 }
 
 export const exportToCSV = (data: ExportData, dateRange: { from: Date; to: Date }): void => {
-  const dateStr = format(new Date(), "yyyy-MM-dd");
+  const dateStr = format(new Date(), 'yyyy-MM-dd');
   const filename = `linkguardian-analytics-${dateStr}.csv`;
 
-  let csvContent = "";
+  const formatSeconds = (ms?: number | null): string => {
+    if (ms === null || ms === undefined) {
+      return '\t0.00';
+    }
 
-  // Overview section
-  csvContent += "Overview Statistics\n";
-  csvContent += `Date Range,${format(dateRange.from, "yyyy-MM-dd")} to ${format(dateRange.to, "yyyy-MM-dd")}\n`;
-  csvContent += `Total Checks,${data.overview.totalChecks}\n`;
-  csvContent += `Average Response Time (ms),${data.overview.avgResponseTime}\n`;
-  csvContent += `Uptime Rate (%),${data.overview.uptimeRate}\n`;
-  csvContent += "\n";
+    const seconds = ms / 1000;
+    return `\t${seconds.toFixed(2)}`;
+  };
 
-  // Top Broken Links
-  csvContent += "Top Broken Links\n";
-  csvContent += "URL,Category,Broken Count,Last Broken\n";
+  const safeNumber = (value?: number | null): string => `\t${value ?? 0}`;
+
+  let csvContent = '';
+
+  csvContent += 'Overview Statistics\n';
+  csvContent += `Date Range;${format(dateRange.from, 'yyyy-MM-dd')} to ${format(
+    dateRange.to,
+    'yyyy-MM-dd',
+  )}\n`;
+  csvContent += `Total Checks;${safeNumber(data.overview.totalChecks)}\n`;
+  csvContent += `Average Response Time (s);${formatSeconds(data.overview.avgResponseTime)}\n`;
+  csvContent += `Uptime Rate (%);${safeNumber(data.overview.uptimeRate)}\n`;
+  csvContent += '\n';
+
+  csvContent += 'Top Broken Links\n';
+  csvContent += 'URL;Category;Broken Count;Last Broken\n';
+
   data.brokenLinks.forEach((link) => {
-    csvContent += `"${link.url}","${link.category || "Uncategorized"}",${link.broken_count},"${link.last_broken}"\n`;
+    csvContent += `"${link.url}";"${link.category || 'Uncategorized'}";${safeNumber(
+      link.broken_count,
+    )};"${link.last_broken}"\n`;
   });
-  csvContent += "\n";
 
-  // Slowest Links
-  csvContent += "Slowest Links\n";
-  csvContent += "URL,Category,Average Response Time (ms)\n";
+  csvContent += '\n';
+
+  csvContent += 'Slowest Links\n';
+  csvContent += 'URL;Category;Average Response Time (s)\n';
+
   data.slowestLinks.forEach((link) => {
-    csvContent += `"${link.url}","${link.category || "Uncategorized"}",${link.avg_response}\n`;
+    csvContent += `"${link.url}";"${link.category || 'Uncategorized'}";${formatSeconds(
+      link.avg_response,
+    )}\n`;
   });
-  csvContent += "\n";
 
-  // Category Performance
-  csvContent += "Category Performance\n";
-  csvContent += "Category,Total Links,Active Links,Broken Links,Average Response Time (ms)\n";
+  csvContent += '\n';
+
+  csvContent += 'Category Performance\n';
+  csvContent += 'Category;Total Links;Active Links;Broken Links;Average Response Time (s)\n';
+
   data.categoryPerformance.forEach((cat) => {
-    csvContent += `"${cat.category}",${cat.total_links},${cat.active_links},${cat.broken_links},${cat.avg_response}\n`;
+    csvContent += `"${cat.category}";${safeNumber(cat.total_links)};${safeNumber(
+      cat.active_links,
+    )};${safeNumber(cat.broken_links)};${formatSeconds(cat.avg_response)}\n`;
   });
 
-  // Create download link
-  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-  const link = document.createElement("a");
+  const blob = new Blob([csvContent], {
+    type: 'text/csv;charset=utf-8;',
+  });
+
+  const link = document.createElement('a');
   const url = URL.createObjectURL(blob);
-  link.setAttribute("href", url);
-  link.setAttribute("download", filename);
-  link.style.visibility = "hidden";
+
+  link.href = url;
+  link.download = filename;
+  link.style.visibility = 'hidden';
+
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+
+  URL.revokeObjectURL(url);
 };

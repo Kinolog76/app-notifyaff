@@ -15,7 +15,7 @@ interface DateRangePickerProps {
 }
 
 export const DateRangePicker = ({ dateRange, onDateRangeChange }: DateRangePickerProps) => {
-  const [activePreset, setActivePreset] = useState<string>("30");
+  const [activePreset, setActivePreset] = useState<string>("7");
 
   const presets = [
     { label: "Last 7 days", days: 7 },
