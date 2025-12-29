@@ -65,6 +65,8 @@ interface LinkCheck {
   response_time_ms: number;
   error_message?: string;
   redirect_chain?: string[];
+  retry_count?: number;
+  confidence_score?: number;
 }
 
 const statusConfig = {
@@ -247,6 +249,32 @@ export default function LinkDetailPage() {
     if (code >= 300 && code < 400) return 'text-blue-600';
     if (code >= 400 && code < 500) return 'text-yellow-600';
     return 'text-red-600';
+  };
+
+  // Step 51: Show status changes over time
+  const getCheckStatus = (check: LinkCheck): 'active' | 'broken' | 'warning' => {
+    if (!check.status_code) return 'warning';
+    if (check.status_code >= 200 && check.status_code < 300) return 'active';
+    if (check.status_code === 404 || check.status_code === 410) return 'broken';
+    if (check.status_code >= 400) return 'broken';
+    if (check.status_code >= 500) return 'warning';
+    return 'warning';
+  };
+
+  // Step 51: Detect status changes
+  const hasStatusChanged = (index: number): boolean => {
+    if (index >= checks.length - 1) return false;
+    const currentStatus = getCheckStatus(checks[index]);
+    const previousStatus = getCheckStatus(checks[index + 1]);
+    return currentStatus !== previousStatus;
+  };
+
+  // Step 53: Highlight when link broke
+  const didLinkBreak = (index: number): boolean => {
+    if (index >= checks.length - 1) return false;
+    const currentStatus = getCheckStatus(checks[index]);
+    const previousStatus = getCheckStatus(checks[index + 1]);
+    return previousStatus === 'active' && (currentStatus === 'broken' || currentStatus === 'warning');
   };
 
   const calculateUptime = () => {
@@ -440,7 +468,7 @@ export default function LinkDetailPage() {
           </div>
         </Card>
 
-        {/* Check History */}
+        {/* Check History - Steps 48-53 */}
         <Card className='p-6'>
           <h2 className='text-lg font-semibold mb-4'>Check History</h2>
           {checks.length === 0 ? (
@@ -450,41 +478,92 @@ export default function LinkDetailPage() {
               </p>
             </div>
           ) : (
-            <div className='border rounded-lg'>
+            <div className='border rounded-lg overflow-hidden'>
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Date & Time</TableHead>
+                    <TableHead>Status</TableHead>
                     <TableHead>Status Code</TableHead>
                     <TableHead>Response Time</TableHead>
+                    <TableHead>Retries</TableHead>
+                    <TableHead>Confidence</TableHead>
                     <TableHead>Error</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {checks.map((check) => (
-                    <TableRow key={check.id}>
-                      <TableCell className='font-medium' suppressHydrationWarning>
-                        {formatDate(check.checked_at)}
-                      </TableCell>
-                      <TableCell>
-                        {check.status_code !== null ? (
-                          <span className={getStatusCodeColor(check.status_code)}>
-                            {check.status_code}
-                          </span>
-                        ) : (
-                          <span className='text-muted-foreground'>N/A</span>
-                        )}
-                      </TableCell>
-                      <TableCell>{check.response_time_ms}ms</TableCell>
-                      <TableCell>
-                        {check.error_message ? (
-                          <span className='text-red-600 text-sm'>{check.error_message}</span>
-                        ) : (
-                          <span className='text-muted-foreground'>-</span>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {checks.map((check, index) => {
+                    const checkStatus = getCheckStatus(check);
+                    const statusChanged = hasStatusChanged(index);
+                    const linkBroke = didLinkBreak(index);
+                    const config = statusConfig[checkStatus];
+
+                    return (
+                      <TableRow
+                        key={check.id}
+                        className={linkBroke ? 'bg-red-50 dark:bg-red-950/20' : ''}
+                      >
+                        <TableCell className='font-medium' suppressHydrationWarning>
+                          <div className='flex items-center gap-2'>
+                            {formatDate(check.checked_at)}
+                            {statusChanged && (
+                              <Badge variant='outline' className='text-xs'>
+                                Status Changed
+                              </Badge>
+                            )}
+                            {linkBroke && (
+                              <Badge variant='destructive' className='text-xs'>
+                                Link Broke
+                              </Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={config.variant} className='gap-1.5'>
+                            <div className={`h-2 w-2 rounded-full ${config.color}`} />
+                            {config.label}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {check.status_code !== null ? (
+                            <span className={getStatusCodeColor(check.status_code)}>
+                              {check.status_code}
+                            </span>
+                          ) : (
+                            <span className='text-muted-foreground'>N/A</span>
+                          )}
+                        </TableCell>
+                        <TableCell>{check.response_time_ms}ms</TableCell>
+                        <TableCell>
+                          {check.retry_count !== undefined && check.retry_count > 0 ? (
+                            <Badge variant='secondary' className='text-xs'>
+                              {check.retry_count} {check.retry_count === 1 ? 'retry' : 'retries'}
+                            </Badge>
+                          ) : (
+                            <span className='text-muted-foreground text-sm'>-</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {check.confidence_score !== undefined ? (
+                            <span className={check.confidence_score >= 95 ? 'text-green-600' : 'text-yellow-600'}>
+                              {check.confidence_score}%
+                            </span>
+                          ) : (
+                            <span className='text-muted-foreground text-sm'>-</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {check.error_message ? (
+                            <span className='text-red-600 text-sm max-w-xs truncate block'>
+                              {check.error_message}
+                            </span>
+                          ) : (
+                            <span className='text-muted-foreground'>-</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>

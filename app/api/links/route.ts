@@ -1,6 +1,9 @@
 import { createClient } from "@/utils/supabase/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { checkLinkWithRetry } from "@/lib/link-checker-retry";
+import { storeLinkCheck } from "@/lib/link-check-storage";
+import { updateLinkStatusFromCheck } from "@/lib/link-status-updater";
 
 const createLinkSchema = z.object({
   url: z.string().url("Invalid URL format"),
@@ -92,8 +95,36 @@ export async function POST(request: Request) {
       );
     }
 
+    // Automatic verification: Check the link immediately after creation
+    // This runs in the background and doesn't block the response
+    const linkId = data.id;
+    const linkUrl = data.url;
+
+    // Perform check asynchronously (fire and forget)
+    (async () => {
+      try {
+        console.log(`[Auto-verify] Checking new link: ${linkId}`);
+        const checkResult = await checkLinkWithRetry(linkUrl);
+
+        // Store check result
+        await storeLinkCheck({ linkId, checkResult });
+
+        // Update link status
+        await updateLinkStatusFromCheck(linkId, checkResult);
+
+        console.log(`[Auto-verify] Completed check for link: ${linkId} - Status: ${checkResult.success ? 'success' : 'failed'}`);
+      } catch (verifyError) {
+        console.error(`[Auto-verify] Failed to verify link ${linkId}:`, verifyError);
+        // Don't throw - this is a background operation
+      }
+    })();
+
     return NextResponse.json(
-      { message: "Link created successfully", data },
+      {
+        message: "Link created successfully and verification started",
+        data,
+        verifying: true,
+      },
       { status: 201 }
     );
   } catch (error) {

@@ -2,6 +2,9 @@ import { createClient } from "@/utils/supabase/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { bulkImportLimiter, getClientIp, checkRateLimit } from "@/lib/rate-limit";
+import { checkLinkWithRetry } from "@/lib/link-checker-retry";
+import { storeLinkCheck } from "@/lib/link-check-storage";
+import { updateLinkStatusFromCheck } from "@/lib/link-status-updater";
 
 const bulkImportSchema = z.object({
   links: z.array(
@@ -132,12 +135,41 @@ export async function POST(request: Request) {
       );
     }
 
+    // Automatic verification: Check all imported links in background
+    // Process in batches to avoid overwhelming the system
+    (async () => {
+      try {
+        console.log(`[Auto-verify] Starting verification of ${data.length} bulk imported links`);
+
+        for (const link of data) {
+          try {
+            const checkResult = await checkLinkWithRetry(link.url);
+            await storeLinkCheck({ linkId: link.id, checkResult });
+            await updateLinkStatusFromCheck(link.id, checkResult);
+
+            console.log(`[Auto-verify] Verified bulk link: ${link.id}`);
+          } catch (linkError) {
+            console.error(`[Auto-verify] Failed to verify bulk link ${link.id}:`, linkError);
+            // Continue with next link
+          }
+
+          // Small delay between checks to avoid rate limiting
+          await new Promise(resolve => setTimeout(resolve, 200));
+        }
+
+        console.log(`[Auto-verify] Completed verification of bulk imported links`);
+      } catch (verifyError) {
+        console.error('[Auto-verify] Bulk verification failed:', verifyError);
+      }
+    })();
+
     return NextResponse.json(
       {
         message: `Successfully imported ${data.length} link${
           data.length !== 1 ? "s" : ""
-        }`,
+        } and verification started`,
         data,
+        verifying: true,
       },
       { status: 201 }
     );

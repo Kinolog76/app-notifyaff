@@ -1,5 +1,6 @@
 import { createClient } from "@/utils/supabase/server";
 import { LinkCheckResult } from "./link-checker";
+import { RetryCheckResult } from "./link-checker-retry";
 
 export interface LinkCheckRecord {
   id?: string;
@@ -9,17 +10,21 @@ export interface LinkCheckRecord {
   error_message: string | null;
   redirect_chain: string[];
   checked_at: Date;
+  retry_count?: number;
+  confidence_score?: number;
+  retry_history?: any;
 }
 
 export interface StoreLinkCheckParams {
   linkId: string;
-  checkResult: LinkCheckResult;
+  checkResult: LinkCheckResult | RetryCheckResult;
 }
 
 /**
  * Store link check results in the database
  * Steps 11-17: Store all check data including timestamp, status code,
  * response time, redirect chain, and error messages
+ * Step 46: Store retry attempts in check record
  */
 export async function storeLinkCheck({
   linkId,
@@ -28,8 +33,11 @@ export async function storeLinkCheck({
   try {
     const supabase = await createClient();
 
+    // Check if this is a RetryCheckResult with retry information
+    const isRetryResult = 'retryCount' in checkResult;
+
     // Prepare the record data
-    const checkRecord: Omit<LinkCheckRecord, 'id'> = {
+    const checkRecord: any = {
       link_id: linkId,
       status_code: checkResult.statusCode,
       response_time_ms: checkResult.responseTime,
@@ -37,6 +45,14 @@ export async function storeLinkCheck({
       redirect_chain: checkResult.redirectChain,
       checked_at: checkResult.timestamp,
     };
+
+    // Add retry information if available (Step 46)
+    if (isRetryResult) {
+      const retryResult = checkResult as RetryCheckResult;
+      checkRecord.retry_count = retryResult.retryCount;
+      checkRecord.confidence_score = retryResult.confidenceScore;
+      checkRecord.retry_history = retryResult.retryHistory || null;
+    }
 
     // Insert the check record into the link_checks table
     const { data, error } = await supabase

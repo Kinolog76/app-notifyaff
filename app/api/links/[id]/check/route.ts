@@ -1,6 +1,6 @@
 import { createClient } from "@/utils/supabase/server";
 import { NextResponse } from "next/server";
-import { checkLink } from "@/lib/link-checker";
+import { checkLinkWithRetry } from "@/lib/link-checker-retry";
 import { storeLinkCheck } from "@/lib/link-check-storage";
 import { setLinkChecking, updateLinkStatusFromCheck } from "@/lib/link-status-updater";
 
@@ -54,10 +54,10 @@ export async function POST(
       // Continue anyway - this is not critical
     }
 
-    // Step 27: Call link checker function
+    // Step 27: Call link checker function with retry logic (Steps 43-45)
     let checkResult;
     try {
-      checkResult = await checkLink(link.url);
+      checkResult = await checkLinkWithRetry(link.url);
     } catch (error) {
       console.error("Link check failed:", error);
       return NextResponse.json(
@@ -110,6 +110,8 @@ export async function POST(
             redirectChain: checkResult.redirectChain,
             error: checkResult.error,
             timestamp: checkResult.timestamp,
+            retryCount: checkResult.retryCount,
+            confidenceScore: checkResult.confidenceScore,
           },
           checkRecord: storageResult.data,
         },
