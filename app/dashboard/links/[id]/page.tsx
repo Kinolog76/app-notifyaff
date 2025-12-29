@@ -84,6 +84,7 @@ export default function LinkDetailPage() {
   const [isChecking, setIsChecking] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [checkError, setCheckError] = useState<string | null>(null);
+  const [justUpdated, setJustUpdated] = useState(false);
   const router = useRouter();
   const params = useParams();
   const supabase = createClient();
@@ -100,11 +101,173 @@ export default function LinkDetailPage() {
       } else {
         fetchLinkDetails();
         fetchLinkChecks();
+        setupRealtimeSubscriptions();
       }
     };
 
     getUser();
+
+    // Cleanup subscriptions on unmount
+    return () => {
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('[Realtime] 🧹 Cleaning up subscriptions');
+      console.log('[Realtime] Link ID:', linkId);
+      console.log('[Realtime] Timestamp:', new Date().toISOString());
+
+      const channelsBefore = supabase.getChannels();
+      console.log('[Realtime] Channels before cleanup:', channelsBefore.length);
+
+      supabase.removeAllChannels();
+
+      const channelsAfter = supabase.getChannels();
+      console.log('[Realtime] Channels after cleanup:', channelsAfter.length);
+      console.log('[Realtime] ✅ All channels removed');
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    };
   }, [linkId]);
+
+  const setupRealtimeSubscriptions = () => {
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('[Realtime] 🚀 Setting up subscriptions for link:', linkId);
+    console.log('[Realtime] Timestamp:', new Date().toISOString());
+
+    // Subscribe to link updates
+    const linkChannel = supabase
+      .channel(`link:${linkId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'links',
+          filter: `id=eq.${linkId}`,
+        },
+        (payload) => {
+          console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+          console.log('[Realtime] 📝 Link UPDATE event received');
+          console.log('[Realtime] Timestamp:', new Date().toISOString());
+          console.log('[Realtime] Event type:', payload.eventType);
+          console.log('[Realtime] Old data:', payload.old);
+          console.log('[Realtime] New data:', payload.new);
+
+          // Detect what changed
+          if (payload.old && payload.new) {
+            const oldStatus = payload.old.status;
+            const newStatus = payload.new.status;
+            if (oldStatus !== newStatus) {
+              console.log(`[Realtime] 🔄 Status changed: ${oldStatus} → ${newStatus}`);
+            }
+
+            const oldLastChecked = payload.old.last_checked_at;
+            const newLastChecked = payload.new.last_checked_at;
+            if (oldLastChecked !== newLastChecked) {
+              console.log('[Realtime] ✅ Last checked timestamp updated');
+            }
+          }
+
+          // Update link state with new data
+          setLink((prevLink) => {
+            if (!prevLink) {
+              console.warn('[Realtime] ⚠️ Previous link state is null, skipping update');
+              return null;
+            }
+
+            const updated = {
+              ...prevLink,
+              ...payload.new,
+            } as Link;
+
+            console.log('[Realtime] ✅ Link state updated successfully');
+            return updated;
+          });
+
+          // Show visual feedback
+          setJustUpdated(true);
+          setTimeout(() => setJustUpdated(false), 2000);
+          console.log('[Realtime] 💫 Visual feedback triggered (2s)');
+          console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        }
+      )
+      .subscribe((status, err) => {
+        console.log('[Realtime] 📡 Link channel subscription status:', status);
+        if (err) {
+          console.error('[Realtime] ❌ Link channel error:', err);
+        }
+
+        if (status === 'SUBSCRIBED') {
+          console.log('[Realtime] ✅ Successfully subscribed to link updates');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('[Realtime] ❌ Channel error occurred');
+        } else if (status === 'TIMED_OUT') {
+          console.error('[Realtime] ⏱️ Subscription timed out');
+        } else if (status === 'CLOSED') {
+          console.log('[Realtime] 🔒 Channel closed');
+        }
+      });
+
+    // Subscribe to new check results
+    const checksChannel = supabase
+      .channel(`link_checks:${linkId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'link_checks',
+          filter: `link_id=eq.${linkId}`,
+        },
+        (payload) => {
+          console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+          console.log('[Realtime] 📊 Check INSERT event received');
+          console.log('[Realtime] Timestamp:', new Date().toISOString());
+          console.log('[Realtime] Event type:', payload.eventType);
+          console.log('[Realtime] Check data:', payload.new);
+
+          // Log check details
+          const check = payload.new;
+          if (check) {
+            console.log('[Realtime] Check details:');
+            console.log('  - Status Code:', check.status_code || 'N/A');
+            console.log('  - Response Time:', check.response_time_ms ? `${check.response_time_ms}ms` : 'N/A');
+            console.log('  - Retry Count:', check.retry_count || 0);
+            console.log('  - Confidence:', check.confidence_score ? `${check.confidence_score}%` : 'N/A');
+            console.log('  - Error:', check.error_message || 'None');
+          }
+
+          // Add new check to the beginning of the list
+          setChecks((prevChecks) => {
+            const updated = [payload.new as LinkCheck, ...prevChecks];
+            console.log(`[Realtime] ✅ Check added to history (total: ${updated.length})`);
+            return updated;
+          });
+
+          console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        }
+      )
+      .subscribe((status, err) => {
+        console.log('[Realtime] 📡 Checks channel subscription status:', status);
+        if (err) {
+          console.error('[Realtime] ❌ Checks channel error:', err);
+        }
+
+        if (status === 'SUBSCRIBED') {
+          console.log('[Realtime] ✅ Successfully subscribed to check updates');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('[Realtime] ❌ Channel error occurred');
+        } else if (status === 'TIMED_OUT') {
+          console.error('[Realtime] ⏱️ Subscription timed out');
+        } else if (status === 'CLOSED') {
+          console.log('[Realtime] 🔒 Channel closed');
+        }
+      });
+
+    console.log('[Realtime] ✅ All subscriptions initiated');
+    console.log('[Realtime] Channels:', {
+      link: `link:${linkId}`,
+      checks: `link_checks:${linkId}`,
+    });
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  };
 
   const fetchLinkDetails = async () => {
     setIsLoading(true);
@@ -330,10 +493,18 @@ export default function LinkDetailPage() {
             <div className='flex-1'>
               <div className='flex items-center gap-3 mb-2 flex-wrap'>
                 <h1 className='text-3xl font-bold overflow-wrap-anywhere'>{link.name}</h1>
-                <Badge variant={config.variant} className='gap-1.5'>
+                <Badge
+                  variant={config.variant}
+                  className={`gap-1.5 transition-all ${justUpdated ? 'ring-2 ring-blue-500 ring-offset-2' : ''}`}
+                >
                   <div className={`h-2 w-2 rounded-full ${config.color}`} />
                   {config.label}
                 </Badge>
+                {justUpdated && (
+                  <Badge variant='outline' className='text-xs animate-pulse'>
+                    Updated
+                  </Badge>
+                )}
               </div>
               <a
                 href={link.url}

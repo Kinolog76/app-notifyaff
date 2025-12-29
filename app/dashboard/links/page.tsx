@@ -52,8 +52,104 @@ export default function LinksPage() {
   const [selectedWorkspace, setSelectedWorkspace] = useState<string>('all');
   const supabase = createClient();
 
+  const setupRealtimeSubscriptions = (userId: string) => {
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('[Realtime] 🚀 Setting up links page subscriptions');
+    console.log('[Realtime] User ID:', userId);
+    console.log('[Realtime] Timestamp:', new Date().toISOString());
+
+    // Subscribe to link updates for this user
+    supabase
+      .channel('links_page')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'links',
+          filter: `user_id=eq.${userId}`,
+        },
+        (payload) => {
+          console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+          console.log('[Realtime] 📝 Links table event received');
+          console.log('[Realtime] Event type:', payload.eventType);
+          console.log('[Realtime] Timestamp:', new Date().toISOString());
+
+          if (payload.eventType === 'INSERT') {
+            console.log('[Realtime] ➕ New link added:', payload.new);
+            setLinks((prev) => {
+              const updated = [payload.new as Link, ...prev];
+              console.log(`[Realtime] ✅ Link added (total: ${updated.length})`);
+              return updated;
+            });
+          } else if (payload.eventType === 'UPDATE') {
+            console.log('[Realtime] 📝 Link updated:', payload.new.id);
+            console.log('[Realtime] Old data:', payload.old);
+            console.log('[Realtime] New data:', payload.new);
+
+            // Detect status changes
+            if (payload.old.status !== payload.new.status) {
+              console.log(`[Realtime] 🔄 Status changed: ${payload.old.status} → ${payload.new.status}`);
+            }
+
+            setLinks((prev) => {
+              const updated = prev.map((link) =>
+                link.id === payload.new.id ? { ...link, ...payload.new } : link
+              );
+              console.log('[Realtime] ✅ Link updated in list');
+              return updated;
+            });
+          } else if (payload.eventType === 'DELETE') {
+            console.log('[Realtime] 🗑️ Link deleted:', payload.old.id);
+            setLinks((prev) => {
+              const updated = prev.filter((link) => link.id !== payload.old.id);
+              console.log(`[Realtime] ✅ Link removed (total: ${updated.length})`);
+              return updated;
+            });
+          }
+
+          console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        }
+      )
+      .subscribe((status, err) => {
+        console.log('[Realtime] 📡 Links channel subscription status:', status);
+        if (err) {
+          console.error('[Realtime] ❌ Links channel error:', err);
+        }
+
+        if (status === 'SUBSCRIBED') {
+          console.log('[Realtime] ✅ Successfully subscribed to links updates');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('[Realtime] ❌ Channel error occurred');
+        } else if (status === 'TIMED_OUT') {
+          console.error('[Realtime] ⏱️ Subscription timed out');
+        } else if (status === 'CLOSED') {
+          console.log('[Realtime] 🔒 Channel closed');
+        }
+      });
+
+    console.log('[Realtime] ✅ Links page subscriptions initiated');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  };
+
   useEffect(() => {
-    fetchLinks();
+    let mounted = true;
+
+    const initializeLinks = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user && mounted) {
+        await fetchLinks();
+        setupRealtimeSubscriptions(user.id);
+      }
+    };
+
+    initializeLinks();
+
+    return () => {
+      mounted = false;
+      console.log('[Realtime] 🧹 Cleaning up links page subscriptions');
+      supabase.removeAllChannels();
+    };
   }, []);
 
   useEffect(() => {

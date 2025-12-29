@@ -53,7 +53,147 @@ export default function WorkspaceDetailPage() {
   const router = useRouter();
   const supabase = createClient();
 
+  const setupRealtimeSubscriptions = (userId: string) => {
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('[Realtime] 🚀 Setting up workspace page subscriptions');
+    console.log('[Realtime] User ID:', userId);
+    console.log('[Realtime] Workspace ID:', workspaceId);
+    console.log('[Realtime] Timestamp:', new Date().toISOString());
+
+    // Subscribe to link updates for this workspace
+    supabase
+      .channel(`workspace_links:${workspaceId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'links',
+          filter: `workspace_id=eq.${workspaceId}`,
+        },
+        (payload) => {
+          console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+          console.log('[Realtime] 📝 Links table event received');
+          console.log('[Realtime] Event type:', payload.eventType);
+          console.log('[Realtime] Timestamp:', new Date().toISOString());
+
+          if (payload.eventType === 'INSERT') {
+            console.log('[Realtime] ➕ New link added to workspace:', payload.new);
+            setLinks((prev) => {
+              const updated = [payload.new, ...prev];
+              console.log(`[Realtime] ✅ Link added (total: ${updated.length})`);
+              return updated;
+            });
+            // Update stats
+            setStats((prev) => ({ ...prev, total: prev.total + 1 }));
+          } else if (payload.eventType === 'UPDATE') {
+            console.log('[Realtime] 📝 Link updated:', payload.new.id);
+            console.log('[Realtime] Old data:', payload.old);
+            console.log('[Realtime] New data:', payload.new);
+
+            // Detect status changes
+            if (payload.old.status !== payload.new.status) {
+              console.log(`[Realtime] 🔄 Status changed: ${payload.old.status} → ${payload.new.status}`);
+            }
+
+            setLinks((prev) => {
+              const updated = prev.map((link) =>
+                link.id === payload.new.id ? { ...link, ...payload.new } : link
+              );
+              console.log('[Realtime] ✅ Link updated in list');
+
+              // Recalculate stats
+              const total = updated.length;
+              const active = updated.filter((l) => l.status === 'active').length;
+              const broken = updated.filter((l) => l.status === 'error').length;
+              const warning = updated.filter((l) => l.status === 'warning').length;
+              setStats({ total, active, broken, warning });
+
+              return updated;
+            });
+          } else if (payload.eventType === 'DELETE') {
+            console.log('[Realtime] 🗑️ Link deleted:', payload.old.id);
+            setLinks((prev) => {
+              const updated = prev.filter((link) => link.id !== payload.old.id);
+              console.log(`[Realtime] ✅ Link removed (total: ${updated.length})`);
+
+              // Update stats
+              const total = updated.length;
+              const active = updated.filter((l) => l.status === 'active').length;
+              const broken = updated.filter((l) => l.status === 'error').length;
+              const warning = updated.filter((l) => l.status === 'warning').length;
+              setStats({ total, active, broken, warning });
+
+              return updated;
+            });
+          }
+
+          console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        }
+      )
+      .subscribe((status, err) => {
+        console.log('[Realtime] 📡 Workspace links channel subscription status:', status);
+        if (err) {
+          console.error('[Realtime] ❌ Workspace links channel error:', err);
+        }
+
+        if (status === 'SUBSCRIBED') {
+          console.log('[Realtime] ✅ Successfully subscribed to workspace links updates');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('[Realtime] ❌ Channel error occurred');
+        } else if (status === 'TIMED_OUT') {
+          console.error('[Realtime] ⏱️ Subscription timed out');
+        } else if (status === 'CLOSED') {
+          console.log('[Realtime] 🔒 Channel closed');
+        }
+      });
+
+    // Subscribe to workspace updates
+    const workspaceChannel = supabase
+      .channel(`workspace:${workspaceId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'workspaces',
+          filter: `id=eq.${workspaceId}`,
+        },
+        (payload) => {
+          console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+          console.log('[Realtime] 🏢 Workspace UPDATE event received');
+          console.log('[Realtime] Timestamp:', new Date().toISOString());
+          console.log('[Realtime] Old data:', payload.old);
+          console.log('[Realtime] New data:', payload.new);
+
+          setWorkspace((prev) => {
+            if (!prev) return null;
+            const updated = { ...prev, ...payload.new } as Workspace;
+            console.log('[Realtime] ✅ Workspace updated');
+            return updated;
+          });
+
+          console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        }
+      )
+      .subscribe((status, err) => {
+        console.log('[Realtime] 📡 Workspace channel subscription status:', status);
+        if (err) {
+          console.error('[Realtime] ❌ Workspace channel error:', err);
+        }
+
+        if (status === 'SUBSCRIBED') {
+          console.log('[Realtime] ✅ Successfully subscribed to workspace updates');
+        }
+      });
+
+    console.log('[Realtime] ✅ Workspace page subscriptions initiated');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  };
+
   useEffect(() => {
+    let mounted = true;
+
     const getUser = async () => {
       const {
         data: { user },
@@ -64,11 +204,22 @@ export default function WorkspaceDetailPage() {
       } else {
         fetchWorkspace();
         fetchLinks();
+
+        // Only setup subscriptions if component is still mounted
+        if (mounted) {
+          setupRealtimeSubscriptions(user.id);
+        }
       }
     };
 
     getUser();
-  }, [router, supabase, workspaceId]);
+
+    return () => {
+      mounted = false;
+      console.log('[Realtime] 🧹 Cleaning up workspace page subscriptions');
+      supabase.removeAllChannels();
+    };
+  }, [workspaceId]);
 
   const fetchWorkspace = async () => {
     try {
