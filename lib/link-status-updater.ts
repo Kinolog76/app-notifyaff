@@ -1,5 +1,6 @@
 import { createClient } from "@/utils/supabase/server";
 import { LinkCheckResult } from "./link-checker";
+import { handleLinkStatusNotification } from "./notification-triggers";
 
 export type LinkStatus = "checking" | "active" | "broken" | "warning";
 
@@ -104,17 +105,36 @@ export async function setLinkChecking(
 /**
  * Update link status based on check result
  * Combines status determination and database update
+ * Step 54-59: Triggers notifications if status changed
  */
 export async function updateLinkStatusFromCheck(
   linkId: string,
-  checkResult: LinkCheckResult
+  checkResult: LinkCheckResult,
+  userId?: string
 ): Promise<{ success: boolean; error?: string; status?: LinkStatus }> {
-  const status = determineLinkStatus(checkResult);
-  const result = await updateLinkStatus(linkId, status, checkResult.timestamp);
+  // Get current status before updating
+  const currentStatusResult = await getLinkStatus(linkId);
+  const oldStatus = currentStatusResult.status || 'checking';
+
+  // Determine new status
+  const newStatus = determineLinkStatus(checkResult);
+
+  // Update status in database
+  const result = await updateLinkStatus(linkId, newStatus, checkResult.timestamp);
+
+  // Trigger notifications if status changed (fire-and-forget)
+  if (result.success && userId && hasStatusChanged(oldStatus, newStatus)) {
+    console.log(`[Status Update] Status changed: ${oldStatus} → ${newStatus} for link ${linkId}`);
+
+    // Fire and forget - don't await notification
+    handleLinkStatusNotification(linkId, userId, oldStatus, newStatus).catch((error) => {
+      console.error('[Status Update] Notification failed:', error);
+    });
+  }
 
   return {
     ...result,
-    status,
+    status: newStatus,
   };
 }
 

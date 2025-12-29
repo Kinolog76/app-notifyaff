@@ -639,6 +639,48 @@ export default function LinkDetailPage() {
           </div>
         </Card>
 
+        {/* Response Time Chart - Step 52 */}
+        {checks.length > 0 && (
+          <Card className='p-6'>
+            <h2 className='text-lg font-semibold mb-4'>Response Time Trends</h2>
+            <div className='w-full h-64 relative'>
+              <div className='absolute inset-0 flex items-end justify-between gap-1 pb-8'>
+                {checks.slice(0, 20).reverse().map((check, index) => {
+                  const maxResponseTime = Math.max(...checks.map(c => c.response_time_ms));
+                  const height = (check.response_time_ms / maxResponseTime) * 100;
+                  const checkStatus = getCheckStatus(check);
+                  const barColor =
+                    checkStatus === 'active' ? 'bg-green-500' :
+                    checkStatus === 'warning' ? 'bg-yellow-500' :
+                    'bg-red-500';
+
+                  return (
+                    <div
+                      key={check.id}
+                      className='flex-1 flex flex-col items-center group relative'
+                      title={`${check.response_time_ms}ms - ${formatDate(check.checked_at)}`}
+                    >
+                      <div
+                        className={`w-full ${barColor} rounded-t transition-all hover:opacity-80 cursor-pointer`}
+                        style={{ height: `${Math.max(height, 2)}%` }}
+                      />
+                      <div className='absolute -bottom-6 text-[10px] text-muted-foreground whitespace-nowrap transform -rotate-45 origin-top-left opacity-0 group-hover:opacity-100 transition-opacity'>
+                        {check.response_time_ms}ms
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className='absolute bottom-0 left-0 right-0 h-px bg-border' />
+              <div className='absolute bottom-2 left-0 right-0 flex justify-between text-xs text-muted-foreground px-2'>
+                <span>Oldest</span>
+                <span className='text-center'>Response Time Trend (Last 20 Checks)</span>
+                <span>Latest</span>
+              </div>
+            </div>
+          </Card>
+        )}
+
         {/* Check History - Steps 48-53 */}
         <Card className='p-6'>
           <h2 className='text-lg font-semibold mb-4'>Check History</h2>

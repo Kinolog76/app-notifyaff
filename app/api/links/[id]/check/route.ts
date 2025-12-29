@@ -80,8 +80,8 @@ export async function POST(
       // Continue to update status even if storage fails
     }
 
-    // Step 29: Update link status
-    const statusResult = await updateLinkStatusFromCheck(linkId, checkResult);
+    // Step 29: Update link status (with notification trigger)
+    const statusResult = await updateLinkStatusFromCheck(linkId, checkResult, user.id);
 
     if (!statusResult.success) {
       console.error("Failed to update link status:", statusResult.error);

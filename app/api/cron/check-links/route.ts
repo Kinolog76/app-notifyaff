@@ -48,8 +48,9 @@ function delay(ms: number): Promise<void> {
 /**
  * Check a single link and store results
  * Uses retry logic (Steps 43-45) for resilient checking
+ * Triggers notifications if status changed (Steps 54-59)
  */
-async function checkSingleLink(linkId: string, url: string) {
+async function checkSingleLink(linkId: string, url: string, userId: string) {
   try {
     // Set status to checking
     await setLinkChecking(linkId);
@@ -60,8 +61,8 @@ async function checkSingleLink(linkId: string, url: string) {
     // Store the check result (Step 46: includes retry_count)
     await storeLinkCheck({ linkId, checkResult });
 
-    // Update link status
-    const statusResult = await updateLinkStatusFromCheck(linkId, checkResult);
+    // Update link status (with notification trigger)
+    const statusResult = await updateLinkStatusFromCheck(linkId, checkResult, userId);
 
     return {
       linkId,
@@ -87,11 +88,11 @@ async function checkSingleLink(linkId: string, url: string) {
  * Step 39: Process links in batches (50 at a time)
  * Step 41: Add rate limiting to avoid overwhelming servers
  */
-async function processBatch(links: Array<{ id: string; url: string }>) {
+async function processBatch(links: Array<{ id: string; url: string; user_id: string }>) {
   const results = [];
 
   for (const link of links) {
-    const result = await checkSingleLink(link.id, link.url);
+    const result = await checkSingleLink(link.id, link.url, link.user_id);
     results.push(result);
 
     // Rate limiting delay between requests
@@ -206,7 +207,7 @@ export async function GET(request: Request) {
       console.log(`[CRON] Processing batch ${i + 1}/${batches.length} (${batch.length} links)`);
 
       const batchResults = await processBatch(
-        batch.map((link: any) => ({ id: link.id, url: link.url }))
+        batch.map((link: any) => ({ id: link.id, url: link.url, user_id: link.user_id }))
       );
 
       totalChecked += batchResults.length;
