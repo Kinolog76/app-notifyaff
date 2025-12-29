@@ -17,6 +17,7 @@ import {
 import { AddLinkForm } from '@/components/links/add-link-form';
 import { LinksTable } from '@/components/links/links-table';
 import { BulkImportDialog } from '@/components/links/bulk-import-dialog';
+import { WorkspaceModal } from '@/components/workspace/workspace-modal';
 import { Plus, ArrowLeft, Settings, Trash2, Upload, Trash } from 'lucide-react';
 import Link from 'next/link';
 
@@ -48,6 +49,7 @@ export default function WorkspaceDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedLinks, setSelectedLinks] = useState<string[]>([]);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [isEditWorkspaceOpen, setIsEditWorkspaceOpen] = useState(false);
   const router = useRouter();
   const supabase = createClient();
 
@@ -246,7 +248,7 @@ export default function WorkspaceDetailPage() {
             </div>
           </div>
           <div className='flex gap-2'>
-            <Button variant='outline' size='sm'>
+            <Button variant='outline' size='sm' onClick={() => setIsEditWorkspaceOpen(true)}>
               <Settings className='h-4 w-4' />
               Edit
             </Button>
@@ -336,6 +338,13 @@ export default function WorkspaceDetailPage() {
         onClose={() => setIsImportDialogOpen(false)}
         onSuccess={fetchLinks}
         workspaceId={workspaceId}
+      />
+
+      <WorkspaceModal
+        isOpen={isEditWorkspaceOpen}
+        onClose={() => setIsEditWorkspaceOpen(false)}
+        workspace={workspace}
+        onSuccess={fetchWorkspace}
       />
     </DashboardLayout>
   );

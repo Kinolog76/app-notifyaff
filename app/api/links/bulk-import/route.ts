@@ -1,6 +1,7 @@
 import { createClient } from "@/utils/supabase/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { bulkImportLimiter, getClientIp, checkRateLimit } from "@/lib/rate-limit";
 
 const bulkImportSchema = z.object({
   links: z.array(
@@ -24,6 +25,32 @@ export async function POST(request: Request) {
 
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Rate limiting check (per user)
+    const { success, limit, remaining, reset } = await checkRateLimit(
+      bulkImportLimiter,
+      user.id
+    );
+
+    if (!success) {
+      return NextResponse.json(
+        {
+          error: "Too many bulk imports",
+          message: "You have exceeded the bulk import rate limit. Please try again later.",
+          limit,
+          remaining,
+          reset,
+        },
+        {
+          status: 429,
+          headers: {
+            "X-RateLimit-Limit": limit?.toString() || "0",
+            "X-RateLimit-Remaining": remaining?.toString() || "0",
+            "X-RateLimit-Reset": reset?.toString() || "0",
+          },
+        }
+      );
     }
 
     const body = await request.json();
