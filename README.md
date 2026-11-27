@@ -1,110 +1,84 @@
 # LinkGuardian
 
-Affiliate link monitoring SaaS for micro-influencers (5K-50K followers). Automatically checks affiliate links for errors and sends alerts before revenue is lost.
-
-## Quick Start
-
-1. **Install dependencies:**
-   ```bash
-   npm install
-   ```
-
-2. **Set up environment variables:**
-   Your `.env` file should contain:
-   ```
-   NEXT_PUBLIC_SUPABASE_URL=your-project-url
-   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY=your-anon-key
-   ```
-
-3. **Run the development server:**
-   ```bash
-   npm run dev
-   ```
-
-4. **Open the app:**
-   Visit [http://localhost:3000](http://localhost:3000)
+SaaS for content creators and affiliate marketers that monitors affiliate links and flags broken ones before they cost revenue. Links are checked on a schedule, every status change is recorded, and the dashboard shows link health, response times and problem links.
 
 ## Features
 
-### Authentication (Completed)
-- Email/password sign up and sign in
-- Protected routes with automatic redirects
-- Session management with middleware
-- Server-side and client-side auth support
+- **Link management**: add, edit and delete links, bulk import from CSV, categories and tags, search, filters and sorting, per-link tracking toggle.
+- **Workspaces**: group links by project or client.
+- **Automated checks**: a Vercel Cron job runs every 6 hours. Each check follows the redirect chain, stores the status code, response time and final URL, and uses a 10-second timeout with retry logic.
+- **Status history**: active / warning / broken statuses with a timeline per link and live updates in the dashboard via Supabase Realtime.
+- **Notifications**: status changes (active → broken, broken → active) create in-app notifications, limited to one per link per 24 hours.
+- **Analytics**: overview stats, link health and response time charts, status breakdown, slowest and most often broken links, per-category table, date range picker and CSV export.
+- **Plans and limits**: Free / Pro / Agency limits on links and workspaces, enforced in the UI, in the API and by PostgreSQL triggers, with an upgrade modal.
+- **Auth**: email/password, Google OAuth, password reset, protected routes via middleware.
+- **Marketing site**: landing page, about, contact form (Resend), privacy, terms and cookie pages, light/dark theme.
 
-### Coming Soon
-- Link management (add/edit/delete)
-- Automated link health checks
-- Email and push notifications
-- Dashboard analytics
-- Subscription plans
+## Tech stack
 
-## Documentation
+- **Frontend:** Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4, shadcn/ui (Radix), Framer Motion
+- **Forms and validation:** React Hook Form, Zod
+- **Charts:** Recharts, Chart.js
+- **Backend:** Supabase (PostgreSQL, Auth, Realtime, RLS), Next.js route handlers
+- **Infrastructure:** Vercel Cron, Upstash Redis (rate limiting), Resend (email)
+- **Testing:** Vitest, React Testing Library
 
-- [Setup Guide](docs/SETUP.md) - Complete authentication setup documentation
-- [Supabase Auth Examples](docs/supabase/auth.md) - Code examples and patterns
-- [Project Brief](CLAUDE.md) - Full project specifications and roadmap
-
-## Tech Stack
-
-- **Frontend:** Next.js 14, TypeScript, Tailwind CSS
-- **Backend:** Supabase (PostgreSQL, Auth, Realtime)
-- **Hosting:** Vercel + Supabase
-
-## Project Structure
-
-```
-NotifyAff/
-├── app/                    # Next.js app directory
-│   ├── auth/login/        # Authentication pages
-│   ├── dashboard/         # Protected dashboard
-│   ├── layout.tsx         # Root layout
-│   └── page.tsx           # Landing page
-├── utils/
-│   └── supabase/          # Supabase client utilities
-├── docs/                  # Documentation
-└── middleware.ts          # Auth middleware
-```
-
-## Current Status
-
-**Sprint 1-2: Foundation** ✅
-- [x] Next.js 14 + TypeScript setup
-- [x] Supabase project configuration
-- [x] Authentication implementation
-- [x] Landing page
-- [x] Dashboard layout
-- [ ] Database schema design
-- [ ] Row Level Security policies
-
-**Next Up: Core Features**
-- [ ] Link management UI
-- [ ] Link checker service
-- [ ] Background job system
-- [ ] Notifications
-
-## Development
+## Getting started
 
 ```bash
-# Install dependencies
 npm install
-
-# Run development server
 npm run dev
-
-# Build for production
-npm run build
-
-# Start production server
-npm start
 ```
 
-## Learn More
+Open <http://localhost:3000>.
 
-- [Next.js Documentation](https://nextjs.org/docs)
-- [Supabase Documentation](https://supabase.com/docs)
-- [Tailwind CSS](https://tailwindcss.com/docs)
+Create `.env.local`:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY=
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+CRON_SECRET=
+RESEND_API_KEY=
+CONTACT_EMAIL=
+UPSTASH_REDIS_REST_URL=
+UPSTASH_REDIS_REST_TOKEN=
+```
+
+Apply the SQL migrations from `supabase/migrations/` to your Supabase project.
+
+## Scripts
+
+| Command | Description |
+|---|---|
+| `npm run dev` | Development server |
+| `npm run build` | Production build |
+| `npm start` | Run the production build |
+| `npm run lint` | ESLint |
+| `npm test` | Vitest |
+
+## Project structure
+
+```text
+app/
+  api/
+    links/            # CRUD, bulk CSV import, manual check
+    workspaces/       # workspace CRUD
+    cron/             # scheduled link checks and cleanup
+    contact/          # contact form
+  dashboard/          # links, link details, workspaces, analytics
+  auth/, login/       # sign in, OAuth callback, password reset
+components/           # landing, dashboard, links, analytics, ui
+lib/                  # link checker, retry logic, status history, analytics, notifications, rate limiting
+supabase/migrations/  # schema, RLS policies, analytics functions
+docs/                 # module and feature notes
+```
+
+## Status
+
+Work in progress. Not implemented yet: email delivery for link alerts (in-app notifications only), billing.
 
 ## License
 
-Private project - All rights reserved
+All rights reserved.
